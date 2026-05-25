@@ -36,11 +36,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 w-full max-w-3xl px-4 pointer-events-none">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-3 w-full max-w-3xl px-3 pointer-events-none sm:bottom-8 sm:px-4">
       
-      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 shadow-2xl rounded-2xl p-2 flex items-center gap-2 pointer-events-auto animate-in slide-in-from-bottom-5 duration-300">
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 shadow-2xl rounded-2xl p-2 flex max-w-full flex-wrap items-center justify-center gap-2 pointer-events-auto animate-in slide-in-from-bottom-5 duration-300">
         
-        <div className="flex bg-slate-800 rounded-xl p-1 mr-2">
+        <div className="flex bg-slate-800 rounded-xl p-1 sm:mr-2">
             <button
                 onClick={() => onChangeViewMode('raw')}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -79,7 +79,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </button>
         </div>
 
-        {viewMode !== 'viewer' && <div className="h-8 w-px bg-slate-700 mx-1"></div>}
+        {viewMode !== 'viewer' && <div className="hidden h-8 w-px bg-slate-700 mx-1 sm:block"></div>}
 
         {viewMode === 'viewer' ? (
              <span className="text-slate-500 text-sm px-4">읽기 전용 모드입니다</span>
@@ -119,8 +119,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
                 {smartSelectionCount > 0 && (
                     <>
-                        <div className="h-8 w-px bg-slate-700 mx-1"></div>
-                        <span className="text-blue-300 text-sm font-bold ml-1">{smartSelectionCount}개 선택됨</span>
+                        <div className="hidden h-8 w-px bg-slate-700 mx-1 sm:block"></div>
+                        <span className="text-blue-300 text-sm font-bold ml-1 whitespace-nowrap">{smartSelectionCount}개 선택됨</span>
                         <button
                             onClick={onSmartTranslate}
                             disabled={isTranslating}

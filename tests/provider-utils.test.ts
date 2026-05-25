@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildIndexedBatchContent,
+  parseLineSeparatedTranslations,
   parseIndexedBatchTranslations,
   splitBatchByOpenAICompatibleContext,
 } from "../src/shared/provider-utils";
@@ -44,6 +45,27 @@ test("OpenAI-compatible batch splitter caps item count", () => {
     chunks.map((chunk) => chunk.length),
     [32, 32, 1],
   );
+});
+
+test("batch splitter accepts smaller max item limits for browser LLM", () => {
+  const chunks = splitBatchByOpenAICompatibleContext(
+    Array.from({ length: 10 }, (_, index) => `line-${index}`),
+    "",
+    "Translate.",
+    200_000,
+    4,
+  );
+
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.length),
+    [4, 4, 2],
+  );
+});
+
+test("line separated parser accepts simple browser LLM batch output", () => {
+  assert.deepEqual(parseLineSeparatedTranslations("하나\n둘\n셋", 3), ["하나", "둘", "셋"]);
+  assert.deepEqual(parseLineSeparatedTranslations("1. 하나\n2. 둘", 2), ["하나", "둘"]);
+  assert.equal(parseLineSeparatedTranslations("", 1), null);
 });
 
 test("browser OpenAI-compatible model discovery allows localhost without api key", async () => {

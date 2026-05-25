@@ -12,6 +12,7 @@ import {
   chatEndpointFor,
   DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS,
   estimatePromptTokens,
+  parseLineSeparatedTranslations,
   parseIndexedBatchTranslations,
   RESPONSE_TOKEN_RESERVE,
   splitBatchByOpenAICompatibleContext,
@@ -54,6 +55,7 @@ const COST_PER_1M_INPUT_TOKENS = 0.5;
 const COST_PER_1M_OUTPUT_TOKENS = 3.0;
 const BROWSER_LLM_DEFAULT_CONTEXT_TOKENS = 2048;
 const BROWSER_LLM_MAX_RESPONSE_TOKENS = 512;
+const BROWSER_LLM_MAX_BATCH_ITEMS = 4;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -229,6 +231,60 @@ const translateWithWllama = async (
   });
 };
 
+const parseBrowserLlmTranslations = (rawText: string | undefined, expectedLength: number): string[] => {
+  const lineTranslations = parseLineSeparatedTranslations(rawText, expectedLength);
+  if (lineTranslations) {
+    return lineTranslations;
+  }
+  return parseIndexedBatchTranslations(rawText, expectedLength, 'Browser LLM');
+};
+
+const translateBrowserLlmChunk = async (
+  options: BrowserBatchTranslateOptions,
+  chunk: string[],
+  dictPrompt: string,
+): Promise<{
+  translations: string[];
+  inputTokens: number;
+  outputTokens: number;
+  requestCount: number;
+}> => {
+  const content = buildIndexedBatchContent(chunk, dictPrompt);
+  const response = await translateWithWllama(options, content);
+  const rawText = response.choices[0]?.message.content?.trim();
+  const inputTokens = response.usage?.prompt_tokens || 0;
+  const outputTokens = response.usage?.completion_tokens || 0;
+
+  try {
+    return {
+      translations: parseBrowserLlmTranslations(rawText, chunk.length),
+      inputTokens,
+      outputTokens,
+      requestCount: 1,
+    };
+  } catch (error) {
+    if (chunk.length === 1) {
+      console.warn(error);
+      return {
+        translations: chunk,
+        inputTokens,
+        outputTokens,
+        requestCount: 1,
+      };
+    }
+
+    const middle = Math.ceil(chunk.length / 2);
+    const left = await translateBrowserLlmChunk(options, chunk.slice(0, middle), dictPrompt);
+    const right = await translateBrowserLlmChunk(options, chunk.slice(middle), dictPrompt);
+    return {
+      translations: [...left.translations, ...right.translations],
+      inputTokens: inputTokens + left.inputTokens + right.inputTokens,
+      outputTokens: outputTokens + left.outputTokens + right.outputTokens,
+      requestCount: 1 + left.requestCount + right.requestCount,
+    };
+  }
+};
+
 export const listBrowserProfileModels = async (profile: BrowserStoredProfile): Promise<ProviderModelInfo[]> => {
   if (profile.provider === 'browser-llm') {
     const customUrl = profile.baseUrl.trim();
@@ -366,10 +422,14 @@ export const translateBatchWithBrowserProfile = async (
         (options.profile.provider === 'browser-llm'
           ? BROWSER_LLM_DEFAULT_CONTEXT_TOKENS
           : DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS),
+      options.profile.provider === 'browser-llm'
+        ? BROWSER_LLM_MAX_BATCH_ITEMS
+        : undefined,
     );
   const translations: string[] = [];
   let inputTokens = 0;
   let outputTokens = 0;
+  let requestCount = 0;
 
   for (let index = 0; index < chunks.length; index += 1) {
     const chunk = chunks[index];
@@ -385,6 +445,7 @@ ${content}`,
       translations.push(...parseIndexedBatchTranslations(rawText, chunk.length, 'Gemini'));
       inputTokens += response.usageMetadata?.promptTokenCount || 0;
       outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
+      requestCount += 1;
       if (index < chunks.length - 1) {
         await delay(1000);
       }
@@ -392,11 +453,11 @@ ${content}`,
     }
 
     if (options.profile.provider === 'browser-llm') {
-      const response = await translateWithWllama(options, content);
-      const rawText = response.choices[0]?.message.content?.trim();
-      translations.push(...parseIndexedBatchTranslations(rawText, chunk.length, 'Browser LLM'));
-      inputTokens += response.usage?.prompt_tokens || 0;
-      outputTokens += response.usage?.completion_tokens || 0;
+      const result = await translateBrowserLlmChunk(options, chunk, dictPrompt);
+      translations.push(...result.translations);
+      inputTokens += result.inputTokens;
+      outputTokens += result.outputTokens;
+      requestCount += result.requestCount;
       continue;
     }
 
@@ -405,6 +466,7 @@ ${content}`,
     translations.push(...parseIndexedBatchTranslations(rawText, chunk.length, 'OpenAI-compatible'));
     inputTokens += response.usage?.prompt_tokens || 0;
     outputTokens += response.usage?.completion_tokens || 0;
+    requestCount += 1;
   }
 
   return {
@@ -412,7 +474,7 @@ ${content}`,
     usage: {
       inputTokens,
       outputTokens,
-      requestCount: chunks.length,
+      requestCount,
       cost: options.profile.provider === 'gemini' ? calculateCost(inputTokens, outputTokens) : 0,
     },
   };
