@@ -6,13 +6,13 @@ import {
   isMeaningfulJapaneseSentence,
 } from "../src/shared/grouping";
 
-const segment = (id: string, text: string, selected = true): TextSegment => ({
+const segment = (id: string, text: string, selected = true, translated = false): TextSegment => ({
   id,
   text,
   original: text,
   isJapanese: true,
   isSelected: selected,
-  isTranslated: false,
+  isTranslated: translated,
 });
 
 test("meaningful Japanese sentence rule accepts sentence-like dialogue", () => {
@@ -32,4 +32,14 @@ test("groups selected Japanese text for request-time batching", () => {
     { ids: ["a", "b"], text: "今日はいい天気ですね。" },
     { ids: ["d"], text: "人" },
   ]);
+});
+
+test("skips already translated selected segments when building translation groups", () => {
+  const groups = groupSelectedJapaneseSentences([
+    segment("a", "翻訳済みです。", true, true),
+    segment("b", "\n", false),
+    segment("c", "未翻訳です。"),
+  ]);
+
+  assert.deepEqual(groups, [{ ids: ["c"], text: "未翻訳です。" }]);
 });

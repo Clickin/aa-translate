@@ -112,7 +112,7 @@ export const Editor: React.FC<EditorProps> = ({
 
   const toggleSegmentSelection = (id: string) => {
     const newSegments = segments.map(s => 
-      s.id === id ? { ...s, isSelected: !s.isSelected } : s
+      s.id === id && !s.isTranslated ? { ...s, isSelected: !s.isSelected } : s
     );
     onSegmentsChange(newSegments);
     onSelectionChange(null); 
@@ -205,7 +205,7 @@ export const Editor: React.FC<EditorProps> = ({
     if (!isClick) {
         // Find intersecting segments
         const newSegments = segments.map(seg => {
-          if (!seg.isJapanese) return seg;
+          if (!seg.isJapanese || seg.isTranslated) return seg;
 
           const el = document.getElementById(seg.id);
           if (el && containerRef.current) {
@@ -334,11 +334,11 @@ export const Editor: React.FC<EditorProps> = ({
                    }}
                    className={`
                      rounded px-0.5 transition-colors duration-75 inline-block
-                     ${!isDragMode && 'cursor-pointer'}
-                     ${seg.isSelected 
-                        ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)]' 
-                        : seg.isTranslated 
-                            ? 'text-green-400 hover:bg-slate-800' 
+                     ${!isDragMode && !seg.isTranslated && 'cursor-pointer'}
+                     ${seg.isTranslated
+                        ? 'text-green-400 pointer-events-none'
+                        : seg.isSelected
+                            ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)]'
                             : 'text-yellow-100 hover:bg-slate-700'
                      }
                      ${!seg.isTranslated && !seg.isSelected && 'underline decoration-slate-600/50 decoration-dotted'}

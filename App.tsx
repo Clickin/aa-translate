@@ -215,7 +215,7 @@ function App() {
   };
 
   const handleSmartTranslate = async () => {
-    const selectedSegments = segments.filter((s) => s.isSelected);
+    const selectedSegments = segments.filter((s) => s.isSelected && !s.isTranslated);
     if (selectedSegments.length === 0) return;
 
     setIsTranslating(true);
@@ -277,18 +277,22 @@ function App() {
 
   const handleSelectAllJapanese = () => {
     startTransition(() => {
-      const newSegments = segments.map((s) =>
-        s.isStrictJapanese ||
-        s.isAutoSelected ||
-        s.isBoxedDialogue ||
-        s.isContextDialogue ||
-        s.isArrowBox ||
-        s.isVerticalBox ||
-        s.isIndentedDialogue ||
-        s.isIsolatedDialogue
+      const newSegments = segments.map((s) => {
+        if (s.isTranslated) {
+          return s.isSelected ? { ...s, isSelected: false } : s;
+        }
+
+        return s.isStrictJapanese ||
+          s.isAutoSelected ||
+          s.isBoxedDialogue ||
+          s.isContextDialogue ||
+          s.isArrowBox ||
+          s.isVerticalBox ||
+          s.isIndentedDialogue ||
+          s.isIsolatedDialogue
           ? { ...s, isSelected: true }
-          : s,
-      );
+          : s;
+      });
       setSegments(newSegments);
     });
   };
@@ -460,7 +464,7 @@ function App() {
         onUndo={handleUndo}
         viewMode={viewMode}
         onChangeViewMode={setViewMode}
-        smartSelectionCount={segments.filter((s) => s.isSelected).length}
+        smartSelectionCount={segments.filter((s) => s.isSelected && !s.isTranslated).length}
         onSmartTranslate={handleSmartTranslate}
         isDragMode={isDragMode}
         onToggleDragMode={() => setIsDragMode(!isDragMode)}

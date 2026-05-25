@@ -42,7 +42,7 @@ export const groupSelectedJapaneseSentences = (segments: TextSegment[]): Transla
   };
 
   for (const segment of segments) {
-    if (!segment.isSelected || !segment.isJapanese || segment.text === '\n') {
+    if (!segment.isSelected || !segment.isJapanese || segment.isTranslated || segment.text === '\n') {
       flush();
       continue;
     }
