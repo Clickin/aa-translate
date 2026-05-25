@@ -67,10 +67,12 @@ const getGeminiClient = (profile: BrowserStoredProfile) => {
 };
 
 const openAIHeadersFor = (profile: BrowserStoredProfile): Record<string, string> => {
-  return {
-    'content-type': 'application/json',
-    authorization: `Bearer ${requireApiKey(profile)}`,
-  };
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  const apiKey = profile.apiKey?.trim();
+  if (apiKey) {
+    headers.authorization = `Bearer ${apiKey}`;
+  }
+  return headers;
 };
 
 const friendlyNetworkError = (profile: BrowserStoredProfile, error: unknown): Error => {

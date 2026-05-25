@@ -5,6 +5,7 @@ import {
   parseIndexedBatchTranslations,
   splitBatchByOpenAICompatibleContext,
 } from "../src/shared/provider-utils";
+import { listBrowserProfileModels } from "../services/browserProviderService";
 
 test("indexed batch parser accepts object responses", () => {
   assert.deepEqual(parseIndexedBatchTranslations('{"0":"하나","1":"둘"}', 2, "Test"), [
@@ -42,4 +43,34 @@ test("OpenAI-compatible batch splitter caps item count", () => {
     chunks.map((chunk) => chunk.length),
     [32, 32, 1],
   );
+});
+
+test("browser OpenAI-compatible model discovery allows localhost without api key", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), "http://localhost:1234/v1/models");
+    assert.deepEqual(init?.headers, { "content-type": "application/json" });
+    return new Response(
+      JSON.stringify({
+        data: [{ id: "gemma-3-4b-it" }],
+      }),
+      { headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    assert.deepEqual(
+      await listBrowserProfileModels({
+        id: "local",
+        name: "Local",
+        provider: "openai-compatible",
+        baseUrl: "http://localhost:1234",
+        model: "gemma-3-4b-it",
+        isDefault: true,
+      }),
+      [{ id: "gemma-3-4b-it", name: "gemma-3-4b-it" }],
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
