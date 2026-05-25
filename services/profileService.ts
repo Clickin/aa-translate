@@ -8,6 +8,7 @@ import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 const jsonHeaders = { 'content-type': 'application/json' };
 const browserProfilesStorageKey = 'aa-translator.browser-profiles.v1';
+let useBrowserProfileFallback = false;
 
 const defaultBrowserProfile: BrowserStoredProfile = {
   id: 'browser-gemini',
@@ -55,6 +56,22 @@ const writeBrowserProfiles = (profiles: BrowserStoredProfile[]): void => {
   globalThis.localStorage?.setItem(browserProfilesStorageKey, JSON.stringify(profiles));
 };
 
+const shouldUseBrowserProfiles = (): boolean => {
+  return isBrowserDeployTarget() || useBrowserProfileFallback;
+};
+
+const activateBrowserProfileFallback = () => {
+  useBrowserProfileFallback = true;
+};
+
+export const __resetProfileServiceForTests = () => {
+  useBrowserProfileFallback = false;
+};
+
+const isMissingBackendResponse = (response: Response): boolean => {
+  return response.status === 404 || response.status === 405;
+};
+
 export const getBrowserStoredProfile = (id?: string): BrowserStoredProfile => {
   const profiles = readBrowserProfiles();
   const profile = id ? profiles.find((item) => item.id === id) : profiles.find((item) => item.isDefault);
@@ -65,20 +82,32 @@ export const getBrowserStoredProfile = (id?: string): BrowserStoredProfile => {
 };
 
 export const fetchProfiles = async (): Promise<TranslationProfile[]> => {
-  if (isBrowserDeployTarget()) {
+  if (shouldUseBrowserProfiles()) {
     return readBrowserProfiles().map(publicBrowserProfile);
   }
 
-  const response = await fetch('/api/profiles');
-  if (!response.ok) {
-    throw new Error('프로필 목록을 불러오지 못했습니다.');
+  try {
+    const response = await fetch('/api/profiles');
+    if (!response.ok) {
+      if (isMissingBackendResponse(response)) {
+        activateBrowserProfileFallback();
+        return readBrowserProfiles().map(publicBrowserProfile);
+      }
+      throw new Error('프로필 목록을 불러오지 못했습니다.');
+    }
+    const payload = await response.json() as { profiles: TranslationProfile[] };
+    return payload.profiles;
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof TypeError) {
+      activateBrowserProfileFallback();
+      return readBrowserProfiles().map(publicBrowserProfile);
+    }
+    throw error;
   }
-  const payload = await response.json() as { profiles: TranslationProfile[] };
-  return payload.profiles;
 };
 
 export const saveProfile = async (profile: TranslationProfileInput & { id?: string }): Promise<TranslationProfile> => {
-  if (isBrowserDeployTarget()) {
+  if (shouldUseBrowserProfiles()) {
     const profiles = readBrowserProfiles();
     const existing = profile.id ? profiles.find((item) => item.id === profile.id) : undefined;
     const saved: BrowserStoredProfile = {
@@ -98,21 +127,33 @@ export const saveProfile = async (profile: TranslationProfileInput & { id?: stri
     return publicBrowserProfile(saved);
   }
 
-  const response = await fetch(profile.id ? `/api/profiles/${profile.id}` : '/api/profiles', {
-    method: profile.id ? 'PUT' : 'POST',
-    headers: jsonHeaders,
-    body: JSON.stringify(profile),
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || '프로필 저장에 실패했습니다.');
+  try {
+    const response = await fetch(profile.id ? `/api/profiles/${profile.id}` : '/api/profiles', {
+      method: profile.id ? 'PUT' : 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(profile),
+    });
+    if (!response.ok) {
+      if (isMissingBackendResponse(response)) {
+        activateBrowserProfileFallback();
+        return saveProfile(profile);
+      }
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || '프로필 저장에 실패했습니다.');
+    }
+    const payload = await response.json() as { profile: TranslationProfile };
+    return payload.profile;
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof TypeError) {
+      activateBrowserProfileFallback();
+      return saveProfile(profile);
+    }
+    throw error;
   }
-  const payload = await response.json() as { profile: TranslationProfile };
-  return payload.profile;
 };
 
 export const deleteProfile = async (id: string): Promise<void> => {
-  if (isBrowserDeployTarget()) {
+  if (shouldUseBrowserProfiles()) {
     const profiles = readBrowserProfiles();
     const next = profiles.filter((item) => item.id !== id);
     if (next.length === profiles.length) {
@@ -133,7 +174,7 @@ export const deleteProfile = async (id: string): Promise<void> => {
 };
 
 export const testProfile = async (id: string): Promise<void> => {
-  if (isBrowserDeployTarget()) {
+  if (shouldUseBrowserProfiles()) {
     await testBrowserProfile(getBrowserStoredProfile(id));
     return;
   }
@@ -146,7 +187,7 @@ export const testProfile = async (id: string): Promise<void> => {
 };
 
 export const fetchProfileModels = async (id: string): Promise<ProviderModelInfo[]> => {
-  if (isBrowserDeployTarget()) {
+  if (shouldUseBrowserProfiles()) {
     return listBrowserProfileModels(getBrowserStoredProfile(id));
   }
 
