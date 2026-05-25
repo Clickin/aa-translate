@@ -122,6 +122,20 @@ test("plain Japanese dialogue remains selectable after conservative filtering", 
   }
 });
 
+test("legacy strict dialogue snippets remain smart selectable inside AA context", () => {
+  const segments =
+    segmentContentForTest(`　　　　　　　　　 : :　　良いわねっ！！　　　　　　　　　  : : .
+　　　　　　　 : :　　　　　　　分かったわねっ！！　　: : .
+　　/::/::::::/-==ﾆ＼-=ﾆﾆﾆﾆﾆ|::: !::: !=-＼:::: !=//_==|:::::|:/::　| |　　　　　　　ﾀｯﾀｯﾀ`);
+
+  for (const text of ["良いわねっ！！", "分かったわねっ！！", "ﾀｯﾀｯﾀ"]) {
+    const segment = segments.find((item) => item.text === text);
+    assert.ok(segment, text);
+    assert.equal(segment.isJapanese, true, text);
+    assert.equal(isSmartSelectCandidate(segment), true, text);
+  }
+});
+
 test("meaningful Japanese text remains manually selectable even when not auto-selected", () => {
   const segments = segmentContentForTest(`資材
 他領
@@ -129,6 +143,21 @@ test("meaningful Japanese text remains manually selectable even when not auto-se
 世界情勢`);
 
   for (const text of ["資材", "他領", "遮断", "世界情勢"]) {
+    const segment = segments.find((item) => item.text === text);
+    assert.ok(segment, text);
+    assert.equal(segment.isJapanese, true, text);
+    assert.equal(isSmartSelectCandidate(segment), false, text);
+  }
+});
+
+test("legacy slash-separated Japanese terms remain manually selectable", () => {
+  const segments = segmentContentForTest(`攻撃力/防御力
+魔法使い/戦士
+生ゴミ
+ファイル
+大ヒット`);
+
+  for (const text of ["攻撃力/防御力", "魔法使い/戦士", "生ゴミ", "ファイル", "大ヒット"]) {
     const segment = segments.find((item) => item.text === text);
     assert.ok(segment, text);
     assert.equal(segment.isJapanese, true, text);
