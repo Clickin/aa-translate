@@ -43,8 +43,12 @@ import {
   CheckSquare,
   Bell,
   BellOff,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { translationNotifier } from "./services/notificationService";
+
+type ThemeMode = "dark" | "bright";
 
 function App() {
   const [content, setContent] = useState<string>("");
@@ -62,6 +66,9 @@ function App() {
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
+    localStorage.getItem("aat_theme_mode") === "bright" ? "bright" : "dark",
+  );
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(
     () => localStorage.getItem("aat_notify_on_complete") !== "false",
   );
@@ -100,6 +107,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem("aat_notify_on_complete", String(isNotificationEnabled));
   }, [isNotificationEnabled]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    localStorage.setItem("aat_theme_mode", themeMode);
+  }, [themeMode]);
 
   // Dictionary State with Persistence
   const [customDictionary, setCustomDictionary] = useState<DictionaryEntry[]>(() => {
@@ -364,24 +376,24 @@ function App() {
   const activeProfile = profiles.find((profile) => profile.id === activeProfileId);
 
   return (
-    <div className="flex flex-col h-screen w-full">
-      <header className="min-h-14 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 shrink-0 z-20">
+    <div className="aa-app flex h-screen w-full flex-col">
+      <header className="aa-header flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-2 sm:px-6 z-20">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="bg-blue-600 p-1.5 rounded-lg">
-            <FileText className="w-5 h-5 text-white" />
+          <div className="aa-brand-mark rounded-md p-1.5">
+            <FileText className="w-5 h-5" />
           </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-slate-100 leading-none">AA Translator</h1>
+            <h1 className="aa-title font-bold leading-none">AA Translator</h1>
             <div className="flex min-w-0 items-center gap-2 mt-0.5">
-              <span className="text-[10px] text-slate-400 font-mono truncate max-w-[150px] sm:max-w-[260px]">
+              <span className="aa-muted max-w-[150px] truncate font-mono text-[10px] sm:max-w-[260px]">
                 {activeProfile
                   ? `${activeProfile.provider} / ${activeProfile.model}`
                   : "NO PROFILE"}
               </span>
-              <span className="w-0.5 h-2.5 bg-slate-700"></span>
+              <span className="aa-rule h-2.5 w-0.5"></span>
               <button
                 onClick={() => setIsStatsOpen(true)}
-                className="text-[10px] text-green-400 font-mono flex items-center gap-1 hover:text-green-300 transition-colors"
+                className="aa-linkish flex items-center gap-1 font-mono text-[10px] transition-colors"
                 title="예상 비용 보기"
               >
                 <Coins className="w-3 h-3" />${apiStats.totalCost.toFixed(6)} (예상)
@@ -400,7 +412,7 @@ function App() {
                   void translationNotifier.requestPermission(true);
                 }
               }}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border rounded text-xs transition-colors sm:px-3 ${isNotificationEnabled ? "border-emerald-600/50 text-emerald-300" : "border-slate-700 text-slate-500"}`}
+              className={`aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3 ${isNotificationEnabled ? "aa-button-active" : ""}`}
               title={isNotificationEnabled ? "번역 완료 알림 끄기" : "번역 완료 알림 켜기"}
             >
               {isNotificationEnabled ? (
@@ -412,7 +424,7 @@ function App() {
             </button>
             <button
               onClick={() => setIsProfileOpen(true)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border rounded text-xs transition-colors sm:px-3 ${activeProfile ? "border-blue-600/50 text-blue-400" : "border-slate-700 text-slate-300"}`}
+              className={`aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3 ${activeProfile ? "aa-button-active" : ""}`}
               title="Provider Profile 설정"
             >
               <Server className="w-3.5 h-3.5" />
@@ -420,7 +432,7 @@ function App() {
             </button>
             <button
               onClick={() => setIsDictOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-xs text-slate-300 transition-colors sm:px-3"
+              className="aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3"
               title="번역 사전 설정"
             >
               <Book className="w-3.5 h-3.5" />
@@ -428,7 +440,7 @@ function App() {
             </button>
             <button
               onClick={() => setIsPromptOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-xs text-slate-300 transition-colors sm:px-3"
+              className="aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3"
               title="번역 프롬프트 설정"
             >
               <MessageSquareQuote className="w-3.5 h-3.5" />
@@ -436,7 +448,7 @@ function App() {
             </button>
             <button
               onClick={() => setIsReportOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-xs text-slate-300 transition-colors sm:px-3"
+              className="aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3"
               title="시스템 로직 보기"
             >
               <Activity className="w-3.5 h-3.5" />
@@ -444,18 +456,30 @@ function App() {
             </button>
             <button
               onClick={() => setIsChangelogOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded text-xs text-slate-300 transition-colors sm:px-3"
+              className="aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3"
               title="업데이트 내역 보기"
             >
               <History className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">History</span>
+            </button>
+            <button
+              onClick={() => setThemeMode((mode) => (mode === "dark" ? "bright" : "dark"))}
+              className="aa-button flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs transition-colors sm:px-3"
+              title={themeMode === "dark" ? "밝은 모드로 전환" : "어두운 모드로 전환"}
+            >
+              {themeMode === "dark" ? (
+                <Sun className="w-3.5 h-3.5" />
+              ) : (
+                <Moon className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">{themeMode === "dark" ? "Bright" : "Dark"}</span>
             </button>
           </div>
 
           {content && viewMode === "smart" && (
             <button
               onClick={handleSelectAllJapanese}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-medium transition-colors shadow-sm sm:px-3"
+              className="aa-button-primary flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3"
               title="모든 일본어 텍스트 선택"
             >
               <CheckSquare className="w-3.5 h-3.5" />
@@ -466,7 +490,7 @@ function App() {
           {(content || fileName) && (
             <button
               onClick={handleDownload}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition-colors shadow-sm sm:px-3"
+              className="aa-button-primary flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3"
               title="번역된 파일 다운로드"
             >
               <Download className="w-3.5 h-3.5" />
@@ -475,14 +499,14 @@ function App() {
           )}
 
           {fileName && (
-            <span className="hidden md:inline-block px-3 py-1 bg-slate-800 rounded-full text-xs text-slate-300 font-mono border border-slate-700 max-w-[150px] truncate">
+            <span className="aa-chip hidden max-w-[150px] truncate rounded px-3 py-1 font-mono text-xs md:inline-block">
               {fileName}
             </span>
           )}
           {fileName && (
             <button
               onClick={handleClear}
-              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-400/10 px-2 py-1 rounded transition-colors"
+              className="aa-button-danger rounded px-2 py-1 text-xs transition-colors"
             >
               닫기
             </button>
@@ -490,7 +514,7 @@ function App() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden relative bg-[#1a1b26]">
+      <main className="aa-main relative flex-1 overflow-hidden">
         {!fileName && !content ? (
           <FileUpload onFileLoaded={handleFileLoaded} />
         ) : (
@@ -561,27 +585,30 @@ function App() {
 
       <div className="fixed bottom-4 right-4 z-40">
         <div className="group relative">
-          <div className="bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white cursor-help shadow-lg border border-slate-700">
+          <div className="aa-button cursor-help rounded-full p-2 shadow-lg">
             <Info className="w-5 h-5" />
           </div>
-          <div className="absolute bottom-full right-0 mb-2 w-72 bg-slate-900 border border-slate-700 p-4 rounded-lg shadow-xl text-xs text-slate-300 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
-            <p className="font-bold text-slate-100 mb-2">사용 가이드</p>
+          <div className="aa-panel pointer-events-none absolute bottom-full right-0 mb-2 w-72 rounded-md p-4 text-xs opacity-0 shadow-xl transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+            <p className="aa-title mb-2 font-bold">사용 가이드</p>
             <div className="space-y-2">
               <div>
-                <span className="font-semibold text-blue-400">선택 모드</span>
+                <span className="aa-linkish font-semibold">선택 모드</span>
                 <p>번역하려는 텍스트를 클릭하여 선택하세요.</p>
                 <p className="mt-1">
-                  하단 툴바의{" "}
-                  <span className="text-slate-100 bg-slate-700 px-1 rounded">드래그</span> 버튼을
-                  켜면 박스 드래그로 여러 줄을 한 번에 선택할 수 있습니다.
+                  하단 툴바의 <span className="aa-chip rounded px-1">드래그</span> 버튼을 켜면 박스
+                  드래그로 여러 줄을 한 번에 선택할 수 있습니다.
                 </p>
               </div>
               <div>
-                <span className="font-semibold text-green-400">사전 기능</span>
+                <span className="font-semibold" style={{ color: "var(--aa-success)" }}>
+                  사전 기능
+                </span>
                 <p>상단의 [사전] 메뉴에서 나만의 번역 규칙을 추가하고 저장/복원할 수 있습니다.</p>
               </div>
               <div>
-                <span className="font-semibold text-yellow-400">Profile</span>
+                <span className="font-semibold" style={{ color: "var(--aa-warn)" }}>
+                  Profile
+                </span>
                 <p>상단 [Profile] 메뉴에서 Gemini 또는 OpenAI-compatible provider를 설정하세요.</p>
               </div>
             </div>

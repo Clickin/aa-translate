@@ -66,15 +66,15 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileLoaded }) => {
     >
       <label 
         htmlFor="file-upload" 
-        className={`flex flex-col items-center justify-center w-full max-w-2xl h-64 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-300 group relative z-10
+        className={`aa-panel flex h-64 w-full max-w-2xl cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed transition-all duration-300 group relative z-10
           ${isDragging 
-            ? 'border-blue-500 bg-slate-800/90 scale-[1.02] shadow-xl shadow-blue-900/20' 
-            : 'border-slate-600 bg-slate-800 hover:bg-slate-700 hover:border-blue-500'
+            ? 'scale-[1.02] border-[var(--aa-accent)] shadow-xl'
+            : 'hover:border-[var(--aa-accent)]'
           }
         `}
       >
-        <div className="flex flex-col items-center justify-center pt-5 pb-6 text-slate-400 group-hover:text-blue-400 pointer-events-none">
-          <Upload className={`w-12 h-12 mb-4 transition-transform duration-300 ${isDragging ? 'scale-110 text-blue-400' : ''}`} />
+        <div className="aa-muted pointer-events-none flex flex-col items-center justify-center pt-5 pb-6 group-hover:text-[var(--aa-accent)]">
+          <Upload className={`w-12 h-12 mb-4 transition-transform duration-300 ${isDragging ? 'scale-110 text-[var(--aa-accent)]' : ''}`} />
           <p className="mb-2 text-lg font-semibold">
             {isDragging ? "파일을 여기에 놓으세요" : "텍스트 파일(.txt) 업로드"}
           </p>
@@ -91,17 +91,17 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileLoaded }) => {
       
       {/* Visual overlay for the drop zone */}
       {isDragging && (
-        <div className="absolute inset-0 bg-blue-500/10 pointer-events-none z-0" />
+        <div className="absolute inset-0 bg-[var(--aa-accent-soft)] pointer-events-none z-0" />
       )}
 
       <div className="mt-8 flex flex-col items-center gap-4 relative z-10">
         <button 
           onClick={() => onFileLoaded("", "new_file.txt")}
-          className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-colors text-sm font-medium"
+          className="aa-button rounded px-6 py-2 text-sm font-medium transition-colors"
         >
           빈 파일로 시작하기 (직접 붙여넣기)
         </button>
-        <p className="text-slate-500 text-sm max-w-md text-center">
+        <p className="aa-subtle max-w-md text-center text-sm">
           팁: .txt 파일이 깨져 보인다면 UTF-8로 저장 후 업로드해주세요. (Shift-JIS 등의 인코딩 이슈 방지)
         </p>
       </div>

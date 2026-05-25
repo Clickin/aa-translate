@@ -150,20 +150,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-lg w-full max-w-3xl shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-slate-800">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Server className="w-5 h-5 text-blue-400" />
+    <div className="aa-modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="aa-modal flex w-full max-w-3xl flex-col rounded-md shadow-2xl">
+        <div className="aa-modal-header flex items-center justify-between border-b p-5">
+          <h2 className="aa-title flex items-center gap-2 text-lg font-bold">
+            <Server className="aa-linkish w-5 h-5" />
             Provider Profiles
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="aa-muted hover:text-[var(--aa-text)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[420px]">
-          <div className="border-r border-slate-800 p-3 space-y-2">
+          <div className="aa-divider space-y-2 border-r p-3">
             {profiles.map((profile) => (
               <button
                 key={profile.id}
@@ -180,20 +180,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     isDefault: profile.isDefault,
                   });
                 }}
-                className={`w-full text-left px-3 py-2 rounded border text-sm ${
-                  profile.id === activeProfileId ? 'border-blue-500 bg-blue-950/40 text-blue-100' : 'border-slate-800 bg-slate-950 text-slate-300 hover:bg-slate-800'
+                className={`w-full rounded border px-3 py-2 text-left text-sm ${
+                  profile.id === activeProfileId ? 'aa-button-active' : 'aa-button'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate font-medium">{profile.name}</span>
-                  {profile.isDefault && <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />}
+                  {profile.isDefault && <CheckCircle2 className="w-4 h-4 shrink-0 text-[var(--aa-success)]" />}
                 </div>
-                <div className="mt-1 text-[11px] text-slate-500 truncate">{profile.provider} / {profile.model}</div>
+                <div className="aa-subtle mt-1 truncate text-[11px]">{profile.provider} / {profile.model}</div>
               </button>
             ))}
             <button
               onClick={() => setForm(emptyForm)}
-              className="w-full px-3 py-2 rounded border border-slate-700 text-sm text-slate-300 hover:bg-slate-800"
+              className="aa-button w-full rounded px-3 py-2 text-sm"
             >
               새 프로필
             </button>
@@ -201,19 +201,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           <div className="p-5 space-y-4">
             {isBrowserMode && (
-              <p className="text-xs text-slate-400 border border-slate-800 bg-slate-950 rounded px-3 py-2">
+              <p className="aa-panel-soft aa-muted rounded px-3 py-2 text-xs">
                 Browser BYOK mode: API key는 이 브라우저 localStorage에만 저장됩니다.
               </p>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="space-y-1 text-sm text-slate-300">
+              <label className="aa-muted space-y-1 text-sm">
                 <span>이름</span>
-                <input className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                <input className="aa-input w-full rounded px-3 py-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </label>
-              <label className="space-y-1 text-sm text-slate-300">
+              <label className="aa-muted space-y-1 text-sm">
                 <span>Provider</span>
                 <select
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2"
+                  className="aa-input w-full rounded px-3 py-2"
                   value={form.provider}
                   onChange={(e) => {
                     setForm(defaultsForProvider(e.target.value as TranslationProvider, isBrowserMode));
@@ -224,18 +224,18 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   <option value="openai-compatible">OpenAI-compatible</option>
                 </select>
               </label>
-              <label className="space-y-1 text-sm text-slate-300 md:col-span-2">
+              <label className="aa-muted space-y-1 text-sm md:col-span-2">
                 <span>Base URL</span>
-                <input className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs" value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
+                <input className="aa-input w-full rounded px-3 py-2 font-mono text-xs" value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
               </label>
-              <div className="space-y-1 text-sm text-slate-300">
+              <div className="aa-muted space-y-1 text-sm">
                 <div className="flex items-center justify-between gap-2">
                   <span>Model</span>
                   <button
                     type="button"
                     onClick={loadModels}
                     disabled={isLoadingModels}
-                    className="inline-flex items-center gap-1 text-xs text-blue-300 hover:text-blue-200 disabled:text-slate-500"
+                    className="aa-linkish inline-flex items-center gap-1 text-xs disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isLoadingModels ? 'animate-spin' : ''}`} />
                     새로고침
@@ -243,7 +243,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 </div>
                 <input
                   list="profile-model-options"
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs"
+                  className="aa-input w-full rounded px-3 py-2 font-mono text-xs"
                   value={form.model}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
                 />
@@ -255,17 +255,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   ))}
                 </datalist>
               </div>
-              <label className="space-y-1 text-sm text-slate-300">
+              <label className="aa-muted space-y-1 text-sm">
                 <span>API Key</span>
-                <input type="password" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs" value={form.apiKey} placeholder="저장된 key 유지" onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+                <input type="password" className="aa-input w-full rounded px-3 py-2 font-mono text-xs" value={form.apiKey} placeholder="저장된 key 유지" onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
               </label>
-              <label className="space-y-1 text-sm text-slate-300">
+              <label className="aa-muted space-y-1 text-sm">
                 <span>Context tokens</span>
                 <input
                   type="number"
                   min={0}
                   step={512}
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs"
+                  className="aa-input w-full rounded px-3 py-2 font-mono text-xs"
                   value={form.maxContextTokens ?? ''}
                   placeholder="4096"
                   onChange={(e) =>
@@ -278,22 +278,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </label>
             </div>
 
-            <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+            <label className="aa-muted inline-flex items-center gap-2 text-sm">
               <input type="checkbox" checked={form.isDefault} onChange={(e) => setForm({ ...form, isDefault: e.target.checked })} />
               기본 프로필로 사용
             </label>
 
-            {status && <p className="text-sm text-green-300">{status}</p>}
+            {status && <p className="aa-status text-sm">{status}</p>}
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <div className="aa-modal-footer flex items-center justify-end gap-2 border-t pt-3">
               {form.id && (
-                <button onClick={() => onDeleteProfile(form.id!)} className="mr-auto flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-900/20 rounded text-sm">
+                <button onClick={() => onDeleteProfile(form.id!)} className="aa-button-danger mr-auto flex items-center gap-2 rounded px-3 py-2 text-sm">
                   <Trash2 className="w-4 h-4" />
                   삭제
                 </button>
               )}
-              <button onClick={test} className="px-4 py-2 text-slate-300 hover:bg-slate-800 rounded text-sm">테스트</button>
-              <button onClick={save} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm">
+              <button onClick={test} className="aa-button rounded px-4 py-2 text-sm">테스트</button>
+              <button onClick={save} className="aa-button-primary flex items-center gap-2 rounded px-4 py-2 text-sm">
                 <Save className="w-4 h-4" />
                 저장
               </button>

@@ -17,6 +17,9 @@
       }
     </style>
     <link rel="stylesheet" href="/src/index.css">
+    <script>
+      document.documentElement.dataset.theme = localStorage.getItem("aat_theme_mode") === "bright" ? "bright" : "dark";
+    </script>
   </head>
   <body class="bg-slate-900 text-slate-100 h-screen overflow-hidden selection:bg-blue-500 selection:text-white">
     <div id="root"></div>

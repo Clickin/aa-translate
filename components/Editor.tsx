@@ -270,10 +270,10 @@ export const Editor: React.FC<EditorProps> = ({
   if (viewMode === 'viewer') {
     return (
        <div className="relative w-full h-full flex flex-col">
-         <div className="absolute top-2 right-4 z-10 flex gap-2 bg-black/10 backdrop-blur p-1 rounded-lg border border-black/10">
-            <button onClick={() => setFontSize(f => Math.max(10, f - 1))} className="px-2 py-1 text-xs text-slate-700 hover:text-black hover:bg-white/50 rounded">A-</button>
-            <span className="px-2 py-1 text-xs text-slate-700 font-mono">{fontSize}px</span>
-            <button onClick={() => setFontSize(f => Math.min(32, f + 1))} className="px-2 py-1 text-xs text-slate-700 hover:text-black hover:bg-white/50 rounded">A+</button>
+         <div className="aa-editor-control absolute top-2 right-4 z-10 flex gap-2 backdrop-blur p-1 rounded-md">
+            <button onClick={() => setFontSize(f => Math.max(10, f - 1))} className="rounded px-2 py-1 text-xs">A-</button>
+            <span className="px-2 py-1 text-xs font-mono">{fontSize}px</span>
+            <button onClick={() => setFontSize(f => Math.min(32, f + 1))} className="rounded px-2 py-1 text-xs">A+</button>
          </div>
          <div
             className="w-full h-full p-4 overflow-auto whitespace-pre font-aa leading-tight select-text text-[#2e2e2e]"
@@ -292,10 +292,10 @@ export const Editor: React.FC<EditorProps> = ({
   return (
     <div className="relative w-full h-full flex flex-col">
       {/* Font Controls */}
-      <div className="absolute top-2 right-4 z-10 flex gap-2 bg-slate-800/80 backdrop-blur p-1 rounded-lg border border-slate-700">
-        <button onClick={() => setFontSize(f => Math.max(10, f - 1))} className="px-2 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-700 rounded">A-</button>
-        <span className="px-2 py-1 text-xs text-slate-400">{fontSize}px</span>
-        <button onClick={() => setFontSize(f => Math.min(32, f + 1))} className="px-2 py-1 text-xs text-slate-300 hover:text-white hover:bg-slate-700 rounded">A+</button>
+      <div className="aa-editor-control absolute top-2 right-4 z-10 flex gap-2 rounded-md p-1 backdrop-blur">
+        <button onClick={() => setFontSize(f => Math.max(10, f - 1))} className="rounded px-2 py-1 text-xs">A-</button>
+        <span className="px-2 py-1 text-xs">{fontSize}px</span>
+        <button onClick={() => setFontSize(f => Math.min(32, f + 1))} className="rounded px-2 py-1 text-xs">A+</button>
       </div>
 
       {viewMode === 'raw' ? (
@@ -308,13 +308,13 @@ export const Editor: React.FC<EditorProps> = ({
           onKeyUp={handleSelect}
           onWheel={handleWheel}
           spellCheck={false}
-          className="w-full h-full bg-[#1a1b26] text-[#a9b1d6] p-4 resize-none focus:outline-none font-aa scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent leading-tight"
+          className="aa-editor w-full h-full p-4 resize-none focus:outline-none font-aa leading-tight"
           style={{ fontSize: `${fontSize}px` }}
         />
       ) : (
         <div 
           ref={containerRef}
-          className={`w-full h-full bg-[#1a1b26] text-[#a9b1d6] p-4 overflow-auto whitespace-pre font-aa leading-tight select-none relative ${isDragMode ? 'cursor-crosshair' : ''} touch-none`}
+          className={`aa-editor relative h-full w-full overflow-auto whitespace-pre p-4 font-aa leading-tight select-none ${isDragMode ? 'cursor-crosshair' : ''} touch-none`}
           style={{ fontSize: `${fontSize}px` }}
           onWheel={handleWheel}
           onPointerDown={handlePointerDown}
@@ -336,25 +336,25 @@ export const Editor: React.FC<EditorProps> = ({
                      rounded px-0.5 transition-colors duration-75 inline-block
                      ${!isDragMode && !seg.isTranslated && 'cursor-pointer'}
                      ${seg.isTranslated
-                        ? 'text-green-400 pointer-events-none'
+                        ? 'aa-aa-translated pointer-events-none'
                         : seg.isSelected
-                            ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(37,99,235,0.5)]'
-                            : 'text-yellow-100 hover:bg-slate-700'
+                            ? 'aa-aa-selected'
+                            : 'aa-aa-japanese'
                      }
-                     ${!seg.isTranslated && !seg.isSelected && 'underline decoration-slate-600/50 decoration-dotted'}
+                     ${!seg.isTranslated && !seg.isSelected && 'underline decoration-dotted'}
                    `}
                  >
                    {seg.text}
                  </span>
                );
              }
-             return <span key={seg.id} className="opacity-70 pointer-events-none">{seg.text}</span>;
+             return <span key={seg.id} className="aa-aa-faint pointer-events-none">{seg.text}</span>;
            })}
 
            {/* Selection Box Overlay */}
            <div 
              ref={dragOverlayRef}
-             className="absolute hidden border border-blue-400 bg-blue-500/20 pointer-events-none z-20"
+             className="aa-selection-box absolute hidden pointer-events-none z-20"
            />
         </div>
       )}
