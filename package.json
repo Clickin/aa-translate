@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env ./node_modules/vite/bin/vite.js --port=3000 --host=0.0.0.0",
     "dev:client": "node --env-file-if-exists=.env ./node_modules/vite/bin/vite.js --port=3000 --host=0.0.0.0",
+    "dev:pages": "tsx tools/vite-pages.ts dev",
     "dev:server": "node --env-file-if-exists=.env --import tsx src/server/node-entry.ts",
     "build:client": "vite build",
-    "build:pages": "tsx tools/build-pages.ts",
+    "build:pages": "tsx tools/vite-pages.ts build",
     "build:server": "tsc -p tsconfig.server.json",
     "build": "pnpm build:client && pnpm build:server",
     "embed:client": "tsx tools/embed-client-assets.ts",
