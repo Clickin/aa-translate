@@ -54,6 +54,7 @@ test("profile service falls back to local storage when static preview has no bac
     const profiles = await fetchProfiles();
     assert.equal(profiles.length, 1);
     assert.equal(profiles[0].id, "browser-gemini");
+    assert.equal(profiles[0].model, "gemini-2.5-flash");
 
     const saved = await saveProfile({
       name: "Local",
@@ -140,7 +141,7 @@ test("profile save falls back when static host returns html for api path", async
       name: "Local",
       provider: "gemini",
       baseUrl: "https://generativelanguage.googleapis.com",
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       isDefault: true,
     });
 
@@ -148,6 +149,44 @@ test("profile save falls back when static host returns html for api path", async
     assert.equal(saved.provider, "gemini");
     assert.equal(saved.hasApiKey, false);
     assert.equal(apiRequests, 1);
+  } finally {
+    __resetProfileServiceForTests();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  }
+});
+
+test("browser profiles normalize the removed Gemini preview default", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocalStorage = globalThis.localStorage;
+  const storage = new MemoryStorage() as Storage;
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  storage.setItem(
+    "aa-translator.browser-profiles.v1",
+    JSON.stringify([
+      {
+        id: "old-gemini",
+        name: "Gemini",
+        provider: "gemini",
+        baseUrl: "https://generativelanguage.googleapis.com",
+        model: "gemini-3-flash-preview",
+        isDefault: true,
+      },
+    ]),
+  );
+  globalThis.fetch = async () => new Response("Not found", { status: 404 });
+  __resetProfileServiceForTests();
+
+  try {
+    const profiles = await fetchProfiles();
+    assert.equal(profiles[0].model, "gemini-2.5-flash");
   } finally {
     __resetProfileServiceForTests();
     globalThis.fetch = originalFetch;

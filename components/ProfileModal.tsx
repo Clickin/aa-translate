@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, RefreshCw, Save, Server, Trash2, X } from 'lucide-react';
 import type { ProviderModelInfo, TranslationProfile, TranslationProvider } from '../types';
+import { DEFAULT_GEMINI_MODEL } from '../src/shared/gemini-models';
 import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 interface ProfileModalProps {
@@ -40,7 +41,7 @@ const browserEmptyForm = {
   name: 'Gemini BYOK',
   provider: 'gemini' as TranslationProvider,
   baseUrl: 'https://generativelanguage.googleapis.com',
-  model: 'gemini-3-flash-preview',
+  model: DEFAULT_GEMINI_MODEL,
   maxContextTokens: undefined as number | undefined,
 };
 
@@ -51,7 +52,7 @@ const defaultsForProvider = (provider: TranslationProvider, isBrowserMode: boole
       name: 'Gemini Flash',
       provider,
       baseUrl: 'https://generativelanguage.googleapis.com',
-      model: 'gemini-3-flash-preview',
+      model: DEFAULT_GEMINI_MODEL,
       maxContextTokens: undefined,
     };
   }

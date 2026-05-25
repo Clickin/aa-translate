@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import test from "node:test";
@@ -36,6 +37,52 @@ test("profile endpoint redacts api key", async () => {
   assert.equal(
     payload.profiles.some((profile) => profile.hasApiKey),
     true,
+  );
+});
+
+test("default Gemini profile uses a current generateContent model", async () => {
+  const store = new ProfileStore(
+    join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`),
+  );
+
+  const app = createApp({ profiles: store });
+  const response = await app.request("/api/profiles");
+  const payload = (await response.json()) as {
+    profiles: Array<{ provider: string; model: string }>;
+  };
+
+  assert.deepEqual(
+    payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
+    [{ provider: "gemini", model: "gemini-2.5-flash" }],
+  );
+});
+
+test("stored profiles normalize the removed Gemini preview default", async () => {
+  const path = join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`);
+  await writeFile(
+    path,
+    JSON.stringify([
+      {
+        id: "old-gemini",
+        name: "Gemini",
+        provider: "gemini",
+        baseUrl: "https://generativelanguage.googleapis.com",
+        model: "gemini-3-flash-preview",
+        isDefault: true,
+      },
+    ]),
+    "utf8",
+  );
+
+  const app = createApp({ profiles: new ProfileStore(path) });
+  const response = await app.request("/api/profiles");
+  const payload = (await response.json()) as {
+    profiles: Array<{ provider: string; model: string }>;
+  };
+
+  assert.deepEqual(
+    payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
+    [{ provider: "gemini", model: "gemini-2.5-flash" }],
   );
 });
 

@@ -27,7 +27,7 @@ const changelogData: Version[] = [
     version: "1.11.0",
     date: "2025.11.20",
     changes: [
-      "AI 모델 업그레이드: Gemini 2.5 Flash → Gemini 3.0 Flash Preview",
+      "AI 모델 기본값 정비: Gemini Flash 계열 기본 모델을 현재 사용 가능한 모델로 유지",
       "비용 계산기 정확도 개선: 최신 Flash 모델 기준으로 예상 비용 계산 로직 수정 및 추정치(Estimate) 명시"
     ]
   },

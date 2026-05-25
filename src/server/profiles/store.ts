@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { TranslationProfileInput } from '../../../types.js';
+import { DEFAULT_GEMINI_MODEL, normalizeGeminiModel } from '../../shared/gemini-models.js';
 import type { PublicTranslationProfile, StoredTranslationProfile } from '../providers/types.js';
 
 const defaultProfile: StoredTranslationProfile = {
@@ -8,7 +9,7 @@ const defaultProfile: StoredTranslationProfile = {
   name: 'Gemini Flash',
   provider: 'gemini',
   baseUrl: 'https://generativelanguage.googleapis.com',
-  model: 'gemini-3-flash-preview',
+  model: DEFAULT_GEMINI_MODEL,
   apiKey: process.env.GEMINI_API_KEY || process.env.API_KEY,
   isDefault: true,
 };
@@ -49,7 +50,7 @@ export class ProfileStore {
       name: input.name.trim(),
       provider: input.provider,
       baseUrl: input.baseUrl.trim(),
-      model: input.model.trim(),
+      model: normalizeGeminiModel(input.provider, input.model),
       maxContextTokens: normalizeMaxContextTokens(input.maxContextTokens),
       apiKey: input.apiKey?.trim() || undefined,
       isDefault: input.isDefault ?? profiles.length === 0,
@@ -73,7 +74,7 @@ export class ProfileStore {
       name: input.name.trim(),
       provider: input.provider,
       baseUrl: input.baseUrl.trim(),
-      model: input.model.trim(),
+      model: normalizeGeminiModel(input.provider, input.model),
       maxContextTokens: normalizeMaxContextTokens(input.maxContextTokens),
       apiKey: input.apiKey?.trim() || existing.apiKey,
       isDefault: input.isDefault ?? existing.isDefault,
@@ -105,7 +106,7 @@ export class ProfileStore {
     try {
       const raw = await readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(raw) as StoredTranslationProfile[];
-      return parsed.length > 0 ? parsed : [defaultProfile];
+      return parsed.length > 0 ? parsed.map(normalizeProfile) : [defaultProfile];
     } catch {
       return [defaultProfile];
     }
@@ -122,8 +123,13 @@ const publicProfile = (profile: StoredTranslationProfile): PublicTranslationProf
   name: profile.name,
   provider: profile.provider,
   baseUrl: profile.baseUrl,
-  model: profile.model,
+  model: normalizeGeminiModel(profile.provider, profile.model),
   maxContextTokens: profile.maxContextTokens,
   hasApiKey: Boolean(profile.apiKey),
   isDefault: profile.isDefault,
+});
+
+const normalizeProfile = (profile: StoredTranslationProfile): StoredTranslationProfile => ({
+  ...profile,
+  model: normalizeGeminiModel(profile.provider, profile.model),
 });

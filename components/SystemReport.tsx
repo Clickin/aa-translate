@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { X, Zap, Layers, Terminal, Coins } from 'lucide-react';
+import { DEFAULT_GEMINI_MODEL } from '../src/shared/gemini-models';
 
 interface SystemReportProps {
   isOpen: boolean;
@@ -44,7 +45,7 @@ export const SystemReport: React.FC<SystemReportProps> = ({ isOpen, onClose }) =
               <p className="mb-2 opacity-75">// 청킹 전략 (Chunking Strategy)</p>
               <p>전략: <span className="text-blue-300">동적 토큰 채우기 (Dynamic Token Filling)</span></p>
               <p>목표: <span className="text-blue-300">요청당 약 3000 토큰</span></p>
-              <p>모델: <span className="text-purple-300">gemini-3-flash-preview</span></p>
+              <p>모델: <span className="text-purple-300">{DEFAULT_GEMINI_MODEL}</span></p>
             </div>
             <p className="mt-2 text-sm">
               API 오버헤드를 줄이고 컨텍스트 윈도우(Context Window) 활용을 극대화하기 위해 다음과 같은 전략을 사용합니다:
@@ -67,7 +68,7 @@ export const SystemReport: React.FC<SystemReportProps> = ({ isOpen, onClose }) =
              <div className="mt-2 bg-slate-800/50 p-3 rounded border border-slate-700 text-xs font-mono">
                 <p>입력 (Input): 100만 토큰당 $0.50</p>
                 <p>출력 (Output): 100만 토큰당 $3.00</p>
-                <p className="text-slate-500 mt-1 italic">* Gemini 3.0 Flash 기준 추정치</p>
+                <p className="text-slate-500 mt-1 italic">* Gemini 2.5 Flash 기준 추정치</p>
             </div>
           </section>
 

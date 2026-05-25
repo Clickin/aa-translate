@@ -56,7 +56,7 @@ export const UsageStats: React.FC<UsageStatsProps> = ({ isOpen, onClose, stats }
                         <Coins className="w-4 h-4" />
                         총 예상 비용
                     </div>
-                    <div className="text-xs text-blue-400/70 mt-1">Gemini 3.0 Flash 기준 (추정)</div>
+                    <div className="text-xs text-blue-400/70 mt-1">Gemini 2.5 Flash 기준 (추정)</div>
                 </div>
                 <div className="text-3xl font-bold text-blue-100 font-mono">
                     ${stats.totalCost.toFixed(6)}
@@ -66,8 +66,8 @@ export const UsageStats: React.FC<UsageStatsProps> = ({ isOpen, onClose, stats }
             <div className="mt-3 pt-3 border-t border-blue-500/20 flex items-start gap-2">
                 <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0 mt-0.5" />
                 <p className="text-[10px] text-slate-400 leading-tight">
-                    * 위 비용은 <strong>Gemini 3.0 Flash ($0.50/$3.00)</strong>를 기준으로 계산된 추정치입니다.<br/>
-                    Preview 기간에는 무료일 수 있으나, 정식 출시 후 예상 비용을 미리 파악하기 위한 수치입니다.
+                    * 위 비용은 <strong>Gemini 2.5 Flash ($0.50/$3.00)</strong>를 기준으로 계산된 추정치입니다.<br/>
+                    실제 과금은 Google AI Studio의 현재 가격 정책을 확인하세요.
                 </p>
             </div>
           </div>
