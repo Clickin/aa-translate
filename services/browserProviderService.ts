@@ -1,5 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
+import type { Wllama } from '@wllama/wllama';
 import type { DictionaryEntry, ProviderModelInfo, TranslationProvider, TranslationUsage } from '../types';
+import {
+  BROWSER_LLM_RECOMMENDED_MODELS,
+  findBrowserLlmModel,
+} from '../src/shared/browser-llm-models';
 import { generateDictionaryPrompt } from '../src/shared/prompts';
 import {
   baseV1Url,
@@ -47,6 +52,8 @@ export interface BrowserBatchTranslationResult {
 
 const COST_PER_1M_INPUT_TOKENS = 0.5;
 const COST_PER_1M_OUTPUT_TOKENS = 3.0;
+const BROWSER_LLM_DEFAULT_CONTEXT_TOKENS = 2048;
+const BROWSER_LLM_MAX_RESPONSE_TOKENS = 512;
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -158,7 +165,86 @@ const splitGeminiBatch = (texts: string[]): string[][] => {
   return chunks;
 };
 
+let loadedBrowserLlm:
+  | {
+    key: string;
+    wllama: Wllama;
+  }
+  | undefined;
+
+const browserLlmModelUrl = (profile: BrowserStoredProfile): string => {
+  const baked = findBrowserLlmModel(profile.model);
+  return profile.baseUrl.trim() || baked?.url || profile.model;
+};
+
+const getBrowserLlm = async (profile: BrowserStoredProfile): Promise<Wllama> => {
+  const modelUrl = browserLlmModelUrl(profile);
+  const nCtx = profile.maxContextTokens ?? BROWSER_LLM_DEFAULT_CONTEXT_TOKENS;
+  const key = `${modelUrl}#${nCtx}`;
+  if (loadedBrowserLlm?.key === key && loadedBrowserLlm.wllama.isModelLoaded()) {
+    return loadedBrowserLlm.wllama;
+  }
+
+  if (loadedBrowserLlm?.wllama.isModelLoaded()) {
+    await loadedBrowserLlm.wllama.exit();
+  }
+
+  const wasmUrl = (await import('@wllama/wllama/esm/wasm/wllama.wasm?url')).default;
+  const { Wllama } = await import('@wllama/wllama');
+  const wllama = new Wllama(
+    { default: wasmUrl },
+    {
+      allowOffline: true,
+      logger: {
+        debug: () => undefined,
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+      },
+    },
+  );
+  await wllama.loadModelFromUrl(modelUrl, {
+    n_ctx: nCtx,
+    n_gpu_layers: 999,
+    jinja: true,
+    useCache: true,
+  });
+
+  loadedBrowserLlm = { key, wllama };
+  return wllama;
+};
+
+const translateWithWllama = async (
+  options: BrowserTranslateOptions | BrowserBatchTranslateOptions,
+  content: string,
+) => {
+  const wllama = await getBrowserLlm(options.profile);
+  return await wllama.createChatCompletion({
+    messages: [
+      { role: 'system', content: options.systemInstruction },
+      { role: 'user', content },
+    ],
+    max_tokens: BROWSER_LLM_MAX_RESPONSE_TOKENS,
+    temperature: 0.2,
+  });
+};
+
 export const listBrowserProfileModels = async (profile: BrowserStoredProfile): Promise<ProviderModelInfo[]> => {
+  if (profile.provider === 'browser-llm') {
+    const customUrl = profile.baseUrl.trim();
+    const customModel = customUrl && !BROWSER_LLM_RECOMMENDED_MODELS.some((model) => model.url === customUrl)
+      ? [{ id: customUrl, name: 'Custom GGUF URL', description: customUrl }]
+      : [];
+    return [
+      ...BROWSER_LLM_RECOMMENDED_MODELS.map((model) => ({
+        id: model.id,
+        name: `${model.name} (${model.sizeLabel})`,
+        description: model.description,
+      })),
+      ...customModel,
+    ];
+  }
+
   if (profile.provider === 'gemini') {
     const ai = getGeminiClient(profile);
     const pager = await ai.models.list();
@@ -201,6 +287,14 @@ export const listBrowserProfileModels = async (profile: BrowserStoredProfile): P
 };
 
 export const testBrowserProfile = async (profile: BrowserStoredProfile): Promise<void> => {
+  if (profile.provider === 'browser-llm') {
+    const modelUrl = browserLlmModelUrl(profile);
+    if (!/^https?:\/\//.test(modelUrl)) {
+      throw new Error('Browser LLM model URL must be an http(s) GGUF URL.');
+    }
+    return;
+  }
+
   const models = await listBrowserProfileModels(profile);
   if (models.length === 0) {
     throw new Error('사용 가능한 생성 모델을 찾지 못했습니다.');
@@ -211,6 +305,19 @@ export const translateWithBrowserProfile = async (
   options: BrowserTranslateOptions,
 ): Promise<{ text: string; usage: TranslationUsage }> => {
   const dictPrompt = generateDictionaryPrompt(options.customDictionary, options.useDefaultDictionary);
+
+  if (options.profile.provider === 'browser-llm') {
+    const response = await translateWithWllama(options, `${dictPrompt}\nText to translate: "${options.text}"`);
+    return {
+      text: response.choices[0]?.message.content?.trim() || options.text,
+      usage: {
+        inputTokens: response.usage?.prompt_tokens || 0,
+        outputTokens: response.usage?.completion_tokens || 0,
+        requestCount: 1,
+        cost: 0,
+      },
+    };
+  }
 
   if (options.profile.provider === 'gemini') {
     const response = await getGeminiClient(options.profile).models.generateContent({
@@ -255,7 +362,10 @@ export const translateBatchWithBrowserProfile = async (
       options.texts,
       dictPrompt,
       options.systemInstruction,
-      options.profile.maxContextTokens ?? DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS,
+      options.profile.maxContextTokens ??
+        (options.profile.provider === 'browser-llm'
+          ? BROWSER_LLM_DEFAULT_CONTEXT_TOKENS
+          : DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS),
     );
   const translations: string[] = [];
   let inputTokens = 0;
@@ -278,6 +388,15 @@ ${content}`,
       if (index < chunks.length - 1) {
         await delay(1000);
       }
+      continue;
+    }
+
+    if (options.profile.provider === 'browser-llm') {
+      const response = await translateWithWllama(options, content);
+      const rawText = response.choices[0]?.message.content?.trim();
+      translations.push(...parseIndexedBatchTranslations(rawText, chunk.length, 'Browser LLM'));
+      inputTokens += response.usage?.prompt_tokens || 0;
+      outputTokens += response.usage?.completion_tokens || 0;
       continue;
     }
 

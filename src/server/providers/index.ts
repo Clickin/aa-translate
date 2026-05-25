@@ -19,6 +19,8 @@ export const translateWithProvider = async (options: ProviderTranslateOptions): 
       return translateWithGemini(options);
     case 'openai-compatible':
       return translateWithOpenAICompatible(options);
+    case 'browser-llm':
+      throw new Error('Browser LLM provider is only available in Browser BYOK mode.');
     default:
       throw new Error(`Unsupported provider: ${options.profile.provider satisfies never}`);
   }
@@ -30,6 +32,8 @@ export const listModelsWithProvider = async (options: ProviderListModelsOptions)
       return listGeminiModels(options);
     case 'openai-compatible':
       return listOpenAICompatibleModels(options);
+    case 'browser-llm':
+      return [];
     default:
       throw new Error(`Unsupported provider: ${options.profile.provider satisfies never}`);
   }
@@ -43,6 +47,8 @@ export const translateBatchWithProvider = async (
       return translateBatchWithGemini(options);
     case 'openai-compatible':
       return translateBatchWithOpenAICompatible(options);
+    case 'browser-llm':
+      throw new Error('Browser LLM provider is only available in Browser BYOK mode.');
     default:
       throw new Error(`Unsupported provider: ${options.profile.provider satisfies never}`);
   }

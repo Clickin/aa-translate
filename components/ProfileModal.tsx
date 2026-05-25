@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, RefreshCw, Save, Server, Trash2, X } from 'lucide-react';
 import type { ProviderModelInfo, TranslationProfile, TranslationProvider } from '../types';
+import {
+  BROWSER_LLM_RECOMMENDED_MODELS,
+  DEFAULT_BROWSER_LLM_MODEL,
+  findBrowserLlmModel,
+} from '../src/shared/browser-llm-models';
 import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 interface ProfileModalProps {
@@ -44,6 +49,32 @@ const browserEmptyForm = {
   maxContextTokens: undefined as number | undefined,
 };
 
+const browserLlmEmptyForm = {
+  ...serverEmptyForm,
+  name: 'Browser LLM',
+  provider: 'browser-llm' as TranslationProvider,
+  baseUrl: DEFAULT_BROWSER_LLM_MODEL.url,
+  model: DEFAULT_BROWSER_LLM_MODEL.id,
+  maxContextTokens: 2048,
+};
+
+const defaultsForProvider = (provider: TranslationProvider, isBrowserMode: boolean) => {
+  if (provider === 'browser-llm') {
+    return browserLlmEmptyForm;
+  }
+  if (provider === 'gemini') {
+    return isBrowserMode ? browserEmptyForm : {
+      ...serverEmptyForm,
+      name: 'Gemini Flash',
+      provider,
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      model: 'gemini-3-flash-preview',
+      maxContextTokens: undefined,
+    };
+  }
+  return serverEmptyForm;
+};
+
 export const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
   onClose,
@@ -61,6 +92,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [status, setStatus] = useState('');
   const [models, setModels] = useState<ProviderModelInfo[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const visibleModels = form.provider === 'browser-llm' && models.length === 0
+    ? BROWSER_LLM_RECOMMENDED_MODELS.map((model) => ({
+      id: model.id,
+      name: `${model.name} (${model.sizeLabel})`,
+      description: model.description,
+    }))
+    : models;
 
   useEffect(() => {
     if (!isOpen) {
@@ -74,7 +112,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         provider: active.provider,
         baseUrl: active.baseUrl,
         model: active.model,
-        maxContextTokens: active.maxContextTokens ?? (active.provider === 'openai-compatible' ? 4096 : undefined),
+        maxContextTokens: active.maxContextTokens ??
+          (active.provider === 'openai-compatible' ? 4096 : active.provider === 'browser-llm' ? 2048 : undefined),
         apiKey: '',
         isDefault: active.isDefault,
       });
@@ -150,7 +189,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     provider: profile.provider,
                     baseUrl: profile.baseUrl,
                     model: profile.model,
-                    maxContextTokens: profile.maxContextTokens ?? (profile.provider === 'openai-compatible' ? 4096 : undefined),
+                    maxContextTokens: profile.maxContextTokens ??
+                      (profile.provider === 'openai-compatible' ? 4096 : profile.provider === 'browser-llm' ? 2048 : undefined),
                     apiKey: '',
                     isDefault: profile.isDefault,
                   });
@@ -187,13 +227,21 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </label>
               <label className="space-y-1 text-sm text-slate-300">
                 <span>Provider</span>
-                <select className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2" value={form.provider} onChange={(e) => setForm({ ...form, provider: e.target.value as TranslationProvider })}>
+                <select
+                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2"
+                  value={form.provider}
+                  onChange={(e) => {
+                    setForm(defaultsForProvider(e.target.value as TranslationProvider, isBrowserMode));
+                    setModels([]);
+                  }}
+                >
                   <option value="gemini">Gemini</option>
                   <option value="openai-compatible">OpenAI-compatible</option>
+                  {isBrowserMode && <option value="browser-llm">Browser LLM</option>}
                 </select>
               </label>
               <label className="space-y-1 text-sm text-slate-300 md:col-span-2">
-                <span>Base URL</span>
+                <span>{form.provider === 'browser-llm' ? 'Model URL' : 'Base URL'}</span>
                 <input className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs" value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
               </label>
               <div className="space-y-1 text-sm text-slate-300">
@@ -212,22 +260,31 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                 <select
                   className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs"
                   value={form.model}
-                  onChange={(e) => setForm({ ...form, model: e.target.value })}
+                  onChange={(e) => {
+                    const model = findBrowserLlmModel(e.target.value);
+                    setForm({
+                      ...form,
+                      model: e.target.value,
+                      baseUrl: model?.url ?? form.baseUrl,
+                    });
+                  }}
                 >
-                  {form.model && !models.some((model) => model.id === form.model) && (
+                  {form.model && !visibleModels.some((model) => model.id === form.model) && (
                     <option value={form.model}>{form.model}</option>
                   )}
-                  {models.map((model) => (
+                  {visibleModels.map((model) => (
                     <option key={model.id} value={model.id} title={model.description}>
                       {model.name === model.id ? model.id : `${model.name} (${model.id})`}
                     </option>
                   ))}
                 </select>
               </div>
-              <label className="space-y-1 text-sm text-slate-300">
-                <span>API Key</span>
-                <input type="password" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs" value={form.apiKey} placeholder="저장된 key 유지" onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
-              </label>
+              {form.provider !== 'browser-llm' && (
+                <label className="space-y-1 text-sm text-slate-300">
+                  <span>API Key</span>
+                  <input type="password" className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs" value={form.apiKey} placeholder="저장된 key 유지" onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+                </label>
+              )}
               <label className="space-y-1 text-sm text-slate-300">
                 <span>Context tokens</span>
                 <input

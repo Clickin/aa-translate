@@ -17,6 +17,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.3.0(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3))
+      '@wllama/wllama':
+        specifier: ^3.2.3
+        version: 3.2.3
       hono:
         specifier: ^4.10.7
         version: 4.12.22
@@ -857,6 +860,9 @@ packages:
         optional: true
       babel-plugin-react-compiler:
         optional: true
+
+  '@wllama/wllama@3.2.3':
+    resolution: {integrity: sha512-qf/Xye38o5AaVWBZ9Uq4z8eUCQjo1MMrdzLocnIBTUJJEHzOIG1ST6EiVQ2xW0Lx3KTgFWEeNI49EfvJSWf0Eg==}
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -1828,6 +1834,8 @@ snapshots:
     optionalDependencies:
       '@rolldown/plugin-babel': 0.2.3(@babel/core@7.29.0)(rolldown@1.0.2)(vite@8.0.14(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3))
       babel-plugin-react-compiler: 1.0.0
+
+  '@wllama/wllama@3.2.3': {}
 
   agent-base@7.1.4: {}
 
