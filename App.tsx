@@ -29,6 +29,7 @@ import {
   testProfile,
 } from "./services/profileService";
 import { groupSelectedJapaneseSentences } from "./src/shared/grouping";
+import { selectProfileId } from "./src/shared/profile-selection";
 import {
   FileText,
   Info,
@@ -82,12 +83,7 @@ function App() {
     fetchProfiles()
       .then((loaded) => {
         setProfiles(loaded);
-        const activeExists =
-          activeProfileId && loaded.some((profile) => profile.id === activeProfileId);
-        const nextActive = activeExists
-          ? activeProfileId
-          : (loaded.find((profile) => profile.isDefault)?.id ?? loaded[0]?.id);
-        setActiveProfileId(nextActive);
+        setActiveProfileId(selectProfileId(loaded, activeProfileId));
       })
       .catch((error) => {
         console.error(error);
@@ -359,12 +355,10 @@ function App() {
     setHistoryStack([]);
   };
 
-  const refreshProfiles = async () => {
+  const refreshProfiles = async (preferredProfileId?: string) => {
     const loaded = await fetchProfiles();
     setProfiles(loaded);
-    if (!activeProfileId || !loaded.some((profile) => profile.id === activeProfileId)) {
-      setActiveProfileId(loaded.find((profile) => profile.isDefault)?.id ?? loaded[0]?.id);
-    }
+    setActiveProfileId(selectProfileId(loaded, activeProfileId, preferredProfileId));
   };
 
   const activeProfile = profiles.find((profile) => profile.id === activeProfileId);
@@ -553,8 +547,7 @@ function App() {
         onSelectProfile={setActiveProfileId}
         onSaveProfile={async (profile) => {
           const saved = await saveProfile(profile);
-          setActiveProfileId(saved.id);
-          await refreshProfiles();
+          await refreshProfiles(saved.id);
         }}
         onDeleteProfile={async (id) => {
           await deleteProfile(id);
