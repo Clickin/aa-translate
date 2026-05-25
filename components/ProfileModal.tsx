@@ -19,7 +19,7 @@ interface ProfileModalProps {
     maxContextTokens?: number;
     apiKey?: string;
     isDefault: boolean;
-  }) => Promise<void>;
+  }) => Promise<TranslationProfile>;
   onDeleteProfile: (id: string) => Promise<void>;
   onTestProfile: (id: string) => Promise<void>;
   onFetchModels: (id: string) => Promise<ProviderModelInfo[]>;
@@ -105,7 +105,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   }
 
   const save = async () => {
-    await onSaveProfile(form);
+    const saved = await onSaveProfile(form);
+    setForm({
+      id: saved.id,
+      name: saved.name,
+      provider: saved.provider,
+      baseUrl: saved.baseUrl,
+      model: saved.model,
+      maxContextTokens: saved.maxContextTokens ?? (saved.provider === 'openai-compatible' ? 4096 : undefined),
+      apiKey: '',
+      isDefault: saved.isDefault,
+    });
     setStatus('저장했습니다.');
   };
 

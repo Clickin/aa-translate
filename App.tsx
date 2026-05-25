@@ -547,7 +547,9 @@ function App() {
         onSelectProfile={setActiveProfileId}
         onSaveProfile={async (profile) => {
           const saved = await saveProfile(profile);
+          setActiveProfileId(saved.id);
           await refreshProfiles(saved.id);
+          return saved;
         }}
         onDeleteProfile={async (id) => {
           await deleteProfile(id);
