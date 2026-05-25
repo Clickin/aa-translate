@@ -96,6 +96,89 @@ ${dictPrompt}
 Input Array: ${JSON.stringify(texts)}`;
 };
 
+const stripReasoningBlocks = (text: string): string => {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+};
+
+const findBalancedJsonValues = (text: string): unknown[] => {
+  const source = stripReasoningBlocks(text).replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const openToClose: Record<string, string> = { '[': ']', '{': '}' };
+  const values: unknown[] = [];
+
+  for (let start = 0; start < source.length; start += 1) {
+    const opening = source[start];
+    const expectedClose = openToClose[opening];
+    if (!expectedClose) {
+      continue;
+    }
+
+    const stack = [expectedClose];
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start + 1; index < source.length; index += 1) {
+      const char = source[index];
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = inString;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (inString) {
+        continue;
+      }
+
+      if (openToClose[char]) {
+        stack.push(openToClose[char]);
+        continue;
+      }
+      if (char === stack[stack.length - 1]) {
+        stack.pop();
+        if (stack.length === 0) {
+          values.push(JSON.parse(source.slice(start, index + 1)));
+          start = index;
+          break;
+        }
+      }
+    }
+  }
+
+  return values;
+};
+
+const parseBatchTranslations = (rawText: string | undefined, expectedLength: number): string[] => {
+  if (!rawText) {
+    throw new Error('OpenAI-compatible provider returned an empty batch response.');
+  }
+
+  const values = findBalancedJsonValues(rawText);
+  const candidates = values
+    .map((parsed) =>
+      Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === 'object' && Array.isArray((parsed as { translations?: unknown }).translations)
+          ? (parsed as { translations: unknown[] }).translations
+          : null,
+    )
+    .filter((value): value is unknown[] => Boolean(value) && value.length === expectedLength);
+  const translations = candidates.at(-1);
+
+  if (!translations) {
+    throw new Error(
+      `OpenAI-compatible provider batch response shape mismatch: expected ${expectedLength} translations.`,
+    );
+  }
+
+  return translations.map(String);
+};
+
 const splitBatchByContext = (
   options: ProviderBatchTranslateOptions,
   texts: string[],
@@ -176,17 +259,8 @@ export const translateBatchWithOpenAICompatible = async (
 
   for (const chunk of chunks) {
     const response = await postChat(options, buildBatchContent(chunk, dictPrompt));
-    const rawText = response.choices?.[0]?.message?.content?.trim().replace(/```json|```/g, '').trim();
-
-    let chunkTranslations = chunk;
-    try {
-      const parsed = rawText ? JSON.parse(rawText) : null;
-      if (Array.isArray(parsed) && parsed.length === chunk.length) {
-        chunkTranslations = parsed.map(String);
-      }
-    } catch {
-      chunkTranslations = chunk;
-    }
+    const rawText = response.choices?.[0]?.message?.content?.trim();
+    const chunkTranslations = parseBatchTranslations(rawText, chunk.length);
 
     translations.push(...chunkTranslations);
     inputTokens += response.usage?.prompt_tokens || 0;

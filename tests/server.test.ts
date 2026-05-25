@@ -185,3 +185,128 @@ test("translation jobs complete asynchronously and split local batches by contex
     globalThis.fetch = originalFetch;
   }
 });
+
+test("local async batch jobs accept reasoning text around JSON translations", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: '<think>この入力を韓国語に翻訳します。</think>\n["ko:こんにちは","ko:世界"]',
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }),
+      { headers: { "content-type": "application/json" } },
+    );
+
+  try {
+    const store = new ProfileStore(
+      join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`),
+    );
+    const profile = await store.save({
+      name: "LM Studio",
+      provider: "openai-compatible",
+      baseUrl: "http://127.0.0.1:11434",
+      model: "gemma-local",
+      maxContextTokens: 4096,
+      isDefault: true,
+    });
+
+    const app = createApp({ profiles: store });
+    const createResponse = await app.request("/api/translation-jobs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "batch",
+        profileId: profile.id,
+        texts: ["こんにちは", "世界"],
+        useDefaultDictionary: false,
+        systemInstruction: "Translate to Korean.",
+      }),
+    });
+
+    const created = (await createResponse.json()) as { id: string };
+    let state: any;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const stateResponse = await app.request(`/api/translation-jobs/${created.id}`);
+      state = await stateResponse.json();
+      if (state.status === "completed") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.equal(state.status, "completed");
+    assert.deepEqual(state.result.translations, ["ko:こんにちは", "ko:世界"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("local async batch jobs use translated JSON when the model echoes the input array", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content:
+                'Input Array: ["こんにちは","世界"]\nOutput JSON: ["ko:こんにちは","ko:世界"]',
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }),
+      { headers: { "content-type": "application/json" } },
+    );
+
+  try {
+    const store = new ProfileStore(
+      join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`),
+    );
+    const profile = await store.save({
+      name: "LM Studio",
+      provider: "openai-compatible",
+      baseUrl: "http://127.0.0.1:11434",
+      model: "gemma-local",
+      maxContextTokens: 4096,
+      isDefault: true,
+    });
+
+    const app = createApp({ profiles: store });
+    const createResponse = await app.request("/api/translation-jobs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "batch",
+        profileId: profile.id,
+        texts: ["こんにちは", "世界"],
+        useDefaultDictionary: false,
+        systemInstruction: "Translate to Korean.",
+      }),
+    });
+
+    const created = (await createResponse.json()) as { id: string };
+    let state: any;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const stateResponse = await app.request(`/api/translation-jobs/${created.id}`);
+      state = await stateResponse.json();
+      if (state.status === "completed") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.equal(state.status, "completed");
+    assert.deepEqual(state.result.translations, ["ko:こんにちは", "ko:世界"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
