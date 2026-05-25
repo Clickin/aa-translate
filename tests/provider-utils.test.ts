@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildIndexedBatchContent,
   splitBatchByCharacterBudget,
+  splitBatchForGemini,
   parseIndexedBatchTranslations,
   splitBatchByOpenAICompatibleContext,
 } from "../src/shared/provider-utils";
@@ -56,6 +57,15 @@ test("character budget batch splitter caps item count for structured LLM output"
   assert.deepEqual(
     chunks.map((chunk) => chunk.length),
     [32, 32, 32, 1],
+  );
+});
+
+test("Gemini batch splitter keeps lightweight models on smaller chunks", () => {
+  const chunks = splitBatchForGemini(Array.from({ length: 32 }, (_, index) => `行${index}`));
+
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.length),
+    [8, 8, 8, 8],
   );
 });
 

@@ -159,7 +159,7 @@ test("profile save falls back when static host returns html for api path", async
   }
 });
 
-test("browser profiles normalize the removed Gemini preview default", async () => {
+test("browser profiles preserve explicit Gemini preview model ids", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocalStorage = globalThis.localStorage;
   const storage = new MemoryStorage() as Storage;
@@ -186,7 +186,7 @@ test("browser profiles normalize the removed Gemini preview default", async () =
 
   try {
     const profiles = await fetchProfiles();
-    assert.equal(profiles[0].model, "gemini-3.1-flash-lite");
+    assert.equal(profiles[0].model, "gemini-3-flash-preview");
   } finally {
     __resetProfileServiceForTests();
     globalThis.fetch = originalFetch;
@@ -197,7 +197,7 @@ test("browser profiles normalize the removed Gemini preview default", async () =
   }
 });
 
-test("browser profiles normalize the previous Gemini 2.5 default", async () => {
+test("browser profiles preserve explicit Gemini 2.5 model ids", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocalStorage = globalThis.localStorage;
   const storage = new MemoryStorage() as Storage;
@@ -224,7 +224,7 @@ test("browser profiles normalize the previous Gemini 2.5 default", async () => {
 
   try {
     const profiles = await fetchProfiles();
-    assert.equal(profiles[0].model, "gemini-3.1-flash-lite");
+    assert.equal(profiles[0].model, "gemini-2.5-flash");
   } finally {
     __resetProfileServiceForTests();
     globalThis.fetch = originalFetch;

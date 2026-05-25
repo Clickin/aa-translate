@@ -57,7 +57,7 @@ test("default Gemini profile uses a current generateContent model", async () => 
   );
 });
 
-test("stored profiles normalize the removed Gemini preview default", async () => {
+test("stored profiles preserve explicit Gemini preview model ids", async () => {
   const path = join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`);
   await writeFile(
     path,
@@ -82,11 +82,11 @@ test("stored profiles normalize the removed Gemini preview default", async () =>
 
   assert.deepEqual(
     payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
-    [{ provider: "gemini", model: "gemini-3.1-flash-lite" }],
+    [{ provider: "gemini", model: "gemini-3-flash-preview" }],
   );
 });
 
-test("stored profiles normalize the previous Gemini 2.5 default", async () => {
+test("stored profiles preserve explicit Gemini 2.5 model ids", async () => {
   const path = join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`);
   await writeFile(
     path,
@@ -111,7 +111,7 @@ test("stored profiles normalize the previous Gemini 2.5 default", async () => {
 
   assert.deepEqual(
     payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
-    [{ provider: "gemini", model: "gemini-3.1-flash-lite" }],
+    [{ provider: "gemini", model: "gemini-2.5-flash" }],
   );
 });
 

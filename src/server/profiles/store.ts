@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { TranslationProfileInput } from '../../../types.js';
-import { DEFAULT_GEMINI_MODEL, normalizeGeminiModel } from '../../shared/gemini-models.js';
+import { DEFAULT_GEMINI_MODEL } from '../../shared/gemini-models.js';
 import type { PublicTranslationProfile, StoredTranslationProfile } from '../providers/types.js';
 
 const defaultProfile: StoredTranslationProfile = {
@@ -50,7 +50,7 @@ export class ProfileStore {
       name: input.name.trim(),
       provider: input.provider,
       baseUrl: input.baseUrl.trim(),
-      model: normalizeGeminiModel(input.provider, input.model),
+      model: input.model.trim(),
       maxContextTokens: normalizeMaxContextTokens(input.maxContextTokens),
       apiKey: input.apiKey?.trim() || undefined,
       isDefault: input.isDefault ?? profiles.length === 0,
@@ -74,7 +74,7 @@ export class ProfileStore {
       name: input.name.trim(),
       provider: input.provider,
       baseUrl: input.baseUrl.trim(),
-      model: normalizeGeminiModel(input.provider, input.model),
+      model: input.model.trim(),
       maxContextTokens: normalizeMaxContextTokens(input.maxContextTokens),
       apiKey: input.apiKey?.trim() || existing.apiKey,
       isDefault: input.isDefault ?? existing.isDefault,
@@ -123,7 +123,7 @@ const publicProfile = (profile: StoredTranslationProfile): PublicTranslationProf
   name: profile.name,
   provider: profile.provider,
   baseUrl: profile.baseUrl,
-  model: normalizeGeminiModel(profile.provider, profile.model),
+  model: profile.model.trim(),
   maxContextTokens: profile.maxContextTokens,
   hasApiKey: Boolean(profile.apiKey),
   isDefault: profile.isDefault,
@@ -131,5 +131,5 @@ const publicProfile = (profile: StoredTranslationProfile): PublicTranslationProf
 
 const normalizeProfile = (profile: StoredTranslationProfile): StoredTranslationProfile => ({
   ...profile,
-  model: normalizeGeminiModel(profile.provider, profile.model),
+  model: profile.model.trim(),
 });

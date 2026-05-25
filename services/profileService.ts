@@ -4,7 +4,7 @@ import {
   testBrowserProfile,
   type BrowserStoredProfile,
 } from './browserProviderService';
-import { DEFAULT_GEMINI_MODEL, normalizeGeminiModel } from '../src/shared/gemini-models';
+import { DEFAULT_GEMINI_MODEL } from '../src/shared/gemini-models';
 import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 const jsonHeaders = { 'content-type': 'application/json' };
@@ -33,7 +33,7 @@ const publicBrowserProfile = (profile: BrowserStoredProfile): TranslationProfile
   name: profile.name,
   provider: profile.provider,
   baseUrl: profile.baseUrl,
-  model: normalizeGeminiModel(profile.provider, profile.model),
+  model: profile.model.trim(),
   maxContextTokens: profile.maxContextTokens,
   hasApiKey: Boolean(profile.apiKey),
   isDefault: profile.isDefault,
@@ -41,7 +41,7 @@ const publicBrowserProfile = (profile: BrowserStoredProfile): TranslationProfile
 
 const normalizeBrowserProfile = (profile: BrowserStoredProfile): BrowserStoredProfile => ({
   ...profile,
-  model: normalizeGeminiModel(profile.provider, profile.model),
+  model: profile.model.trim(),
 });
 
 const readBrowserProfiles = (): BrowserStoredProfile[] => {
@@ -130,7 +130,7 @@ export const saveProfile = async (profile: TranslationProfileInput & { id?: stri
       name: profile.name.trim(),
       provider: profile.provider,
       baseUrl: profile.baseUrl.trim(),
-      model: normalizeGeminiModel(profile.provider, profile.model),
+      model: profile.model.trim(),
       maxContextTokens: normalizeMaxContextTokens(profile.maxContextTokens),
       apiKey: profile.apiKey?.trim() || existing?.apiKey,
       isDefault: profile.isDefault ?? existing?.isDefault ?? profiles.length === 0,

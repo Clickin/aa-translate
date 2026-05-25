@@ -3,7 +3,7 @@ import { generateDictionaryPrompt } from '../../shared/prompts.js';
 import {
   buildIndexedBatchContent,
   parseIndexedBatchTranslations,
-  splitBatchByCharacterBudget,
+  splitBatchForGemini,
 } from '../../shared/provider-utils.js';
 import type {
   ProviderBatchTranslateOptions,
@@ -83,7 +83,7 @@ export const translateBatchWithGemini = async (
 
   const ai = getClient(options.profile.apiKey);
   const dictPrompt = generateDictionaryPrompt(options.customDictionary, options.useDefaultDictionary);
-  const chunks = splitBatchByCharacterBudget(options.texts, 4000, 32);
+  const chunks = splitBatchForGemini(options.texts);
 
   const translations: string[] = [];
   let inputTokens = 0;
@@ -98,17 +98,17 @@ export const translateBatchWithGemini = async (
         await delay(2000 * 2 ** attempts);
       }
 
-      try {
-        const content = buildIndexedBatchContent(chunk, dictPrompt);
-        const response = await ai.models.generateContent({
-          model: options.profile.model,
-          contents: `${options.systemInstruction}
+      const content = buildIndexedBatchContent(chunk, dictPrompt);
+      const response = await ai.models.generateContent({
+        model: options.profile.model,
+        contents: `${options.systemInstruction}
 ${content}`,
-        });
+      });
+      inputTokens += response.usageMetadata?.promptTokenCount || 0;
+      outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
 
+      try {
         chunkResult = parseIndexedBatchTranslations(response.text?.trim(), chunk.length, 'Gemini');
-        inputTokens += response.usageMetadata?.promptTokenCount || 0;
-        outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
       } catch {
         chunkResult = attempts === 2 ? chunk : null;
       }

@@ -2,6 +2,8 @@ export const DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS = 4096;
 export const RESPONSE_TOKEN_RESERVE = 768;
 export const CHAT_MESSAGE_OVERHEAD_TOKENS = 32;
 export const MAX_OPENAI_COMPATIBLE_BATCH_ITEMS = 32;
+export const GEMINI_BATCH_MAX_CHARACTERS = 3000;
+export const GEMINI_BATCH_MAX_ITEMS = 8;
 
 export const baseV1Url = (baseUrl: string) => {
   const trimmed = baseUrl.replace(/\/+$/, '');
@@ -187,4 +189,8 @@ export const splitBatchByCharacterBudget = (
   }
 
   return chunks;
+};
+
+export const splitBatchForGemini = (texts: string[]): string[][] => {
+  return splitBatchByCharacterBudget(texts, GEMINI_BATCH_MAX_CHARACTERS, GEMINI_BATCH_MAX_ITEMS);
 };

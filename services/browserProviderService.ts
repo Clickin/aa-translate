@@ -9,7 +9,7 @@ import {
   estimatePromptTokens,
   parseIndexedBatchTranslations,
   RESPONSE_TOKEN_RESERVE,
-  splitBatchByCharacterBudget,
+  splitBatchForGemini,
   splitBatchByOpenAICompatibleContext,
 } from '../src/shared/provider-utils';
 
@@ -229,7 +229,7 @@ export const translateBatchWithBrowserProfile = async (
 
   const dictPrompt = generateDictionaryPrompt(options.customDictionary, options.useDefaultDictionary);
   const chunks = options.profile.provider === 'gemini'
-    ? splitBatchByCharacterBudget(options.texts, 4000, 32)
+    ? splitBatchForGemini(options.texts)
     : splitBatchByOpenAICompatibleContext(
       options.texts,
       dictPrompt,
@@ -246,16 +246,31 @@ export const translateBatchWithBrowserProfile = async (
     const content = buildIndexedBatchContent(chunk, dictPrompt);
 
     if (options.profile.provider === 'gemini') {
-      const response = await getGeminiClient(options.profile).models.generateContent({
-        model: options.profile.model,
-        contents: `${options.systemInstruction}
+      let chunkResult: string[] | null = null;
+
+      for (let attempts = 0; attempts < 3 && chunkResult === null; attempts += 1) {
+        if (attempts > 0) {
+          await delay(2000 * 2 ** attempts);
+        }
+
+        const response = await getGeminiClient(options.profile).models.generateContent({
+          model: options.profile.model,
+          contents: `${options.systemInstruction}
 ${content}`,
-      });
-      const rawText = response.text?.trim();
-      translations.push(...parseIndexedBatchTranslations(rawText, chunk.length, 'Gemini'));
-      inputTokens += response.usageMetadata?.promptTokenCount || 0;
-      outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
-      requestCount += 1;
+        });
+        requestCount += 1;
+        inputTokens += response.usageMetadata?.promptTokenCount || 0;
+        outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
+
+        try {
+          const rawText = response.text?.trim();
+          chunkResult = parseIndexedBatchTranslations(rawText, chunk.length, 'Gemini');
+        } catch {
+          chunkResult = attempts === 2 ? chunk : null;
+        }
+      }
+
+      translations.push(...(chunkResult ?? chunk));
       if (index < chunks.length - 1) {
         await delay(1000);
       }
