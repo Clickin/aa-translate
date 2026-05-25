@@ -1,0 +1,48 @@
+{
+  "name": "aa-translator",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env ./node_modules/vite/bin/vite.js --port=3000 --host=0.0.0.0",
+    "dev:client": "node --env-file-if-exists=.env ./node_modules/vite/bin/vite.js --port=3000 --host=0.0.0.0",
+    "dev:server": "node --env-file-if-exists=.env --import tsx src/server/node-entry.ts",
+    "build:client": "vite build",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build": "pnpm build:client && pnpm build:server",
+    "embed:client": "tsx tools/embed-client-assets.ts",
+    "package:sfx": "pnpm build:client && pnpm embed:client && bun build ./src/server/bun-entry.ts --compile --outfile dist/aa-translator",
+    "start:server": "node --env-file-if-exists=.env dist/server/src/server/node-entry.js",
+    "preview": "vite preview",
+    "clean": "tsx tools/clean.ts",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt --write App.tsx components services src tests/*.test.ts tools index.tsx vite.config.ts types.ts",
+    "format:check": "oxfmt --check App.tsx components services src tests/*.test.ts tools index.tsx vite.config.ts types.ts",
+    "check": "tsc --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.6.0",
+    "@hono/node-server": "^1.19.6",
+    "@tailwindcss/vite": "^4.1.14",
+    "hono": "^4.10.7",
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vite": "^8.0.14"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.0",
+    "@rolldown/plugin-babel": "0.2.3",
+    "@types/babel__core": "^7.20.5",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "babel-plugin-react-compiler": "1.0.0",
+    "oxfmt": "^0.51.0",
+    "oxlint": "^1.30.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2"
+  }
+}

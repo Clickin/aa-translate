@@ -1,0 +1,179 @@
+
+import React from 'react';
+import { X, History, GitCommit } from 'lucide-react';
+
+interface ChangelogModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface Version {
+  version: string;
+  date: string;
+  changes: string[];
+}
+
+const changelogData: Version[] = [
+  {
+    version: "1.12.0",
+    date: "2025.11.21",
+    changes: [
+      "대량 번역 안정성 강화: 순차적 처리(Sequential Processing) 및 속도 조절(Throttling) 로직 적용으로 '과잉 요구' 오류 방지",
+      "번역 누락 방지: 엄격한 길이 검증(Length Validation) 및 청크 단위 자동 재시도(Auto-Retry) 기능 추가",
+      "청크 설정 복구: 텍스트 처리 단위를 기존 값(4000자/200항목)으로 유지하면서 안정성 확보"
+    ]
+  },
+  {
+    version: "1.11.0",
+    date: "2025.11.20",
+    changes: [
+      "AI 모델 업그레이드: Gemini 2.5 Flash → Gemini 3.0 Flash Preview",
+      "비용 계산기 정확도 개선: 최신 Flash 모델 기준으로 예상 비용 계산 로직 수정 및 추정치(Estimate) 명시"
+    ]
+  },
+  {
+    version: "1.10.0",
+    date: "2025.11.20",
+    changes: [
+      "API Key 사용자 지정 기능 추가: 기본 제공 키 대신 자신의 Gemini API Key를 입력하여 사용할 수 있습니다. (설정값은 브라우저에만 저장됨)",
+      "번역 엔진 유연성 확보: 클라우드 배포 환경에서도 사용자가 직접 키를 제공하여 개인 쿼터로 이용 가능"
+    ]
+  },
+  {
+    version: "1.9.0",
+    date: "2025.11.20",
+    changes: [
+      "뷰어 모드(Viewer Mode) 추가: 번역 및 정규식 감지 기능을 끈 상태로 가볍고 빠르게 텍스트를 열람할 수 있는 모드",
+      "자동 배경색 테마 적용: 파일 형식(.mlt/.ast 등)을 감지하여 AA 감상에 최적화된 배경색(베이지/화이트) 자동 적용",
+      "Light Mode 지원: 뷰어 모드에서는 가독성을 위해 라이트 테마 적용"
+    ]
+  },
+  {
+    version: "1.8.0",
+    date: "2025.11.20",
+    changes: [
+      "드래그 선택(Drag Select) 기능 부활: 토글 버튼을 통해 활성화되며, 드래그 박스 안에 포함된 인식 가능한 텍스트만 자동으로 선택하는 스마트 기능 적용",
+      "사전 데이터 영구 저장: 사용자 정의 사전이 브라우저 저장소(Local Storage)에 저장되어 새로고침 후에도 유지됨",
+      "사전 백업/복원: 사용자 사전을 JSON 파일로 내보내거나 불러오는 기능 추가"
+    ]
+  },
+  {
+    version: "1.7.0",
+    date: "2025.11.20",
+    changes: [
+      "시스템 프롬프트 편집 기능 추가: AI에게 전달되는 기본 지시문(어조, 스타일 등)을 사용자가 직접 수정 가능",
+      "프롬프트 & 사전 통합: 사용자 정의 프롬프트가 사전 규칙과 함께 작동하도록 로직 고도화"
+    ]
+  },
+  {
+    version: "1.6.0",
+    date: "2025.11.20",
+    changes: [
+      "사용자 정의 사전(Custom Dictionary) 추가: 사용자가 원하는 번역 단어를 직접 등록 및 관리 가능",
+      "기본 AA 사전 탑재: 야루오, 모나 등 주요 AA 캐릭터 이름에 대한 번역 데이터 내장 (On/Off 가능)",
+      "용어집 프롬프트 통합: 번역 요청 시 설정된 사전 데이터를 AI에게 전달하여 일관성 유지"
+    ]
+  },
+  {
+    version: "1.5.0",
+    date: "2025.11.20",
+    changes: [
+      "스마트 감지 로직 개선: 공백 처리를 단순화하여 2개 이상의 연속된 공백(반각/전각 혼용 포함)만 분리자로 인식하도록 수정",
+      "문맥 유지 강화: 단일 전각/반각 공백이 포함된 문장이 끊기지 않고 하나의 덩어리로 유지되도록 개선",
+      "업데이트 내역(Changelog) 기능 추가"
+    ]
+  },
+  {
+    version: "1.4.0",
+    date: "2025.11.20",
+    changes: [
+      "텍스트 분할 알고리즘 고도화: 수직선(|, │, ┃, ｜)을 벽(Wall)으로 인식하여 아스키 아트 외곽선과 텍스트 분리",
+      "오인식 방지: 탭(Tab) 및 NBSP(줄바꿈 없는 공백) 처리 추가",
+      "아스키 아트(AA)와 대사 간의 간격 인식 정확도 향상"
+    ]
+  },
+  {
+    version: "1.3.0",
+    date: "2025.11.20",
+    changes: [
+      "API 비용 최적화: 요청당 약 3,000 토큰을 채워 보내도록 동적 청킹(Dynamic Chunking) 구현",
+      "안전한 배치 처리: 문장이 중간에 잘리지 않도록 원자적(Atomic) 그룹화 적용",
+      "상세 통계: 입력/출력 토큰 및 예상 비용을 실시간으로 계산하는 통계 창 추가"
+    ]
+  },
+  {
+    version: "1.2.0",
+    date: "2025.11.20",
+    changes: [
+      "UI 경량화: 복잡한 드래그 선택 기능을 제거하고 클릭 기반 인터페이스로 간소화",
+      "AA 필터 제거: 사용성을 저해하는 복잡한 필터 옵션을 제거하고 기본 감지 로직 강화에 집중",
+      "다운로드 기능 추가: 번역된 결과를 텍스트 파일로 저장하는 기능 구현"
+    ]
+  },
+  {
+    version: "1.1.0",
+    date: "2025.11.20",
+    changes: [
+      "Gemini 2.5 Flash 모델 적용",
+      "기본 번역 엔진 구축 및 파일 업로드/파싱 기능 구현",
+      "일본어 텍스트 자동 감지 및 하이라이팅 기능 추가"
+    ]
+  }
+];
+
+export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[80vh]">
+        <div className="flex items-center justify-between p-6 border-b border-slate-800">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <History className="w-5 h-5 text-purple-400" />
+            업데이트 내역
+          </h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto text-slate-300 leading-relaxed custom-scrollbar">
+          <div className="relative border-l border-slate-700 ml-3 space-y-8">
+            {changelogData.map((ver, idx) => (
+              <div key={idx} className="mb-8 ml-6 relative group">
+                <span className="absolute -left-[31px] top-1.5 flex items-center justify-center w-4 h-4 rounded-full bg-slate-800 border border-slate-600 group-hover:border-purple-500 group-hover:bg-purple-900/50 transition-colors">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-500 group-hover:bg-purple-400 transition-colors"></div>
+                </span>
+                
+                <div className="flex items-baseline justify-between mb-2">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    v{ver.version}
+                  </h3>
+                  <span className="text-xs font-mono text-slate-500">{ver.date}</span>
+                </div>
+                
+                <ul className="space-y-2">
+                  {ver.changes.map((change, cIdx) => (
+                    <li key={cIdx} className="text-sm text-slate-400 flex items-start gap-2">
+                      <GitCommit className="w-4 h-4 text-slate-600 mt-0.5 shrink-0" />
+                      <span>{change}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-slate-800 bg-slate-900/50 rounded-b-2xl flex justify-end">
+          <button 
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

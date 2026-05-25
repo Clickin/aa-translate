@@ -1,0 +1,11 @@
+{
+  "ignorePatterns": [
+    ".vite/**",
+    "dist/**",
+    "node_modules/**",
+    "tests/legacy/**"
+  ],
+  "rules": {
+    "no-useless-escape": "off"
+  }
+}
