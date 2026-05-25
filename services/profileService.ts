@@ -59,7 +59,16 @@ const readBrowserProfiles = (): BrowserStoredProfile[] => {
 };
 
 const writeBrowserProfiles = (profiles: BrowserStoredProfile[]): void => {
-  globalThis.localStorage?.setItem(browserProfilesStorageKey, JSON.stringify(profiles));
+  const storage = globalThis.localStorage;
+  if (!storage) {
+    throw new Error('이 브라우저에서 profile 저장소를 사용할 수 없습니다.');
+  }
+
+  const serialized = JSON.stringify(profiles);
+  storage.setItem(browserProfilesStorageKey, serialized);
+  if (storage.getItem(browserProfilesStorageKey) !== serialized) {
+    throw new Error('브라우저 localStorage에 profile을 저장하지 못했습니다.');
+  }
 };
 
 const shouldUseBrowserProfiles = (): boolean => {

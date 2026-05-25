@@ -234,3 +234,83 @@ test("browser profiles normalize the previous Gemini 2.5 default", async () => {
     });
   }
 });
+
+test("profile save reports browser storage write failures", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocalStorage = globalThis.localStorage;
+  const storage = new MemoryStorage() as Storage;
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      ...storage,
+      getItem: storage.getItem.bind(storage),
+      setItem: () => {},
+    },
+  });
+  globalThis.fetch = async () => new Response("Not found", { status: 404 });
+  __resetProfileServiceForTests();
+
+  try {
+    await assert.rejects(
+      () =>
+        saveProfile({
+          name: "Local",
+          provider: "openai-compatible",
+          baseUrl: "http://localhost:1234",
+          model: "llama3.1",
+          isDefault: false,
+        }),
+      /localStorage에 profile을 저장하지 못했습니다/,
+    );
+  } finally {
+    __resetProfileServiceForTests();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  }
+});
+
+test("browser profile update persists a manually entered model", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocalStorage = globalThis.localStorage;
+  const storage = new MemoryStorage() as Storage;
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  globalThis.fetch = async () => new Response("Not found", { status: 404 });
+  __resetProfileServiceForTests();
+
+  try {
+    const inserted = await saveProfile({
+      name: "Local",
+      provider: "openai-compatible",
+      baseUrl: "http://localhost:1234",
+      model: "llama3.1",
+      isDefault: false,
+    });
+    const updated = await saveProfile({
+      id: inserted.id,
+      name: "Local",
+      provider: "openai-compatible",
+      baseUrl: "http://localhost:1234",
+      model: "gemma-test",
+      isDefault: false,
+    });
+    const profiles = await fetchProfiles();
+
+    assert.equal(updated.model, "gemma-test");
+    assert.equal(profiles.find((profile) => profile.id === inserted.id)?.model, "gemma-test");
+  } finally {
+    __resetProfileServiceForTests();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  }
+});

@@ -231,20 +231,19 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     새로고침
                   </button>
                 </div>
-                <select
+                <input
+                  list="profile-model-options"
                   className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 font-mono text-xs"
                   value={form.model}
                   onChange={(e) => setForm({ ...form, model: e.target.value })}
-                >
-                  {form.model && !models.some((model) => model.id === form.model) && (
-                    <option value={form.model}>{form.model}</option>
-                  )}
+                />
+                <datalist id="profile-model-options">
                   {models.map((model) => (
                     <option key={model.id} value={model.id} title={model.description}>
                       {model.name === model.id ? model.id : `${model.name} (${model.id})`}
                     </option>
                   ))}
-                </select>
+                </datalist>
               </div>
               <label className="space-y-1 text-sm text-slate-300">
                 <span>API Key</span>
