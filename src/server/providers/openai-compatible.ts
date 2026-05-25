@@ -20,6 +20,7 @@ const chatEndpointFor = (baseUrl: string) => {
 const DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS = 4096;
 const RESPONSE_TOKEN_RESERVE = 768;
 const CHAT_MESSAGE_OVERHEAD_TOKENS = 32;
+const MAX_OPENAI_COMPATIBLE_BATCH_ITEMS = 32;
 
 const headersFor = (apiKey?: string): Record<string, string> => {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
@@ -90,8 +91,10 @@ const assertPromptFitsContext = (
 };
 
 const buildBatchContent = (texts: string[], dictPrompt: string) => {
-  return `Output a valid JSON array of strings with exactly ${texts.length} items.
-Maintain input order and do not add explanations.
+  return `Output one valid JSON object only.
+Use zero-based string keys from "0" to "${texts.length - 1}".
+Each value must be the translation for the input item at the same index.
+Do not add explanations.
 ${dictPrompt}
 Input Array: ${JSON.stringify(texts)}`;
 };
@@ -160,13 +163,22 @@ const parseBatchTranslations = (rawText: string | undefined, expectedLength: num
 
   const values = findBalancedJsonValues(rawText);
   const candidates = values
-    .map((parsed) =>
-      Array.isArray(parsed)
-        ? parsed
-        : parsed && typeof parsed === 'object' && Array.isArray((parsed as { translations?: unknown }).translations)
-          ? (parsed as { translations: unknown[] }).translations
-          : null,
-    )
+    .map((parsed) => {
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        return null;
+      }
+
+      const object = parsed as Record<string, unknown> & { translations?: unknown };
+      if (Array.isArray(object.translations)) {
+        return object.translations;
+      }
+
+      const indexed = Array.from({ length: expectedLength }, (_, index) => object[String(index)]);
+      return indexed.every((value) => value !== undefined) ? indexed : null;
+    })
     .filter((value): value is unknown[] => Boolean(value) && value.length === expectedLength);
   const translations = candidates.at(-1);
 
@@ -193,7 +205,7 @@ const splitBatchByContext = (
     const limit = Math.max(256, contextTokenLimit(options) - RESPONSE_TOKEN_RESERVE);
     const estimated = estimatePromptTokens(options, candidateContent);
 
-    if (estimated <= limit) {
+    if (estimated <= limit && candidate.length <= MAX_OPENAI_COMPATIBLE_BATCH_ITEMS) {
       current = candidate;
       continue;
     }
