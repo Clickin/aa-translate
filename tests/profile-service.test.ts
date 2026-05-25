@@ -54,7 +54,7 @@ test("profile service falls back to local storage when static preview has no bac
     const profiles = await fetchProfiles();
     assert.equal(profiles.length, 1);
     assert.equal(profiles[0].id, "browser-gemini");
-    assert.equal(profiles[0].model, "gemini-2.5-flash");
+    assert.equal(profiles[0].model, "gemini-3.1-flash-lite");
 
     const saved = await saveProfile({
       name: "Local",
@@ -141,7 +141,7 @@ test("profile save falls back when static host returns html for api path", async
       name: "Local",
       provider: "gemini",
       baseUrl: "https://generativelanguage.googleapis.com",
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       isDefault: true,
     });
 
@@ -186,7 +186,45 @@ test("browser profiles normalize the removed Gemini preview default", async () =
 
   try {
     const profiles = await fetchProfiles();
-    assert.equal(profiles[0].model, "gemini-2.5-flash");
+    assert.equal(profiles[0].model, "gemini-3.1-flash-lite");
+  } finally {
+    __resetProfileServiceForTests();
+    globalThis.fetch = originalFetch;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: originalLocalStorage,
+    });
+  }
+});
+
+test("browser profiles normalize the previous Gemini 2.5 default", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocalStorage = globalThis.localStorage;
+  const storage = new MemoryStorage() as Storage;
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+  storage.setItem(
+    "aa-translator.browser-profiles.v1",
+    JSON.stringify([
+      {
+        id: "old-gemini",
+        name: "Gemini",
+        provider: "gemini",
+        baseUrl: "https://generativelanguage.googleapis.com",
+        model: "gemini-2.5-flash",
+        isDefault: true,
+      },
+    ]),
+  );
+  globalThis.fetch = async () => new Response("Not found", { status: 404 });
+  __resetProfileServiceForTests();
+
+  try {
+    const profiles = await fetchProfiles();
+    assert.equal(profiles[0].model, "gemini-3.1-flash-lite");
   } finally {
     __resetProfileServiceForTests();
     globalThis.fetch = originalFetch;

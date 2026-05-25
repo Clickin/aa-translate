@@ -2,6 +2,12 @@
 
 AA(ASCII Art / Shift-JIS Art) 안의 일본어 대사를 한국어로 번역하는 로컬 우선 번역기입니다.
 
+## Source Lineage
+
+이 프로젝트의 근간이 되는 원본은 Google AI Studio applet
+`https://aistudio.google.com/apps/640cb8e4-43ab-4833-839a-2204c25d265f?fullscreenApplet=true&showPreview=true&showAssistant=true`
+에서 발췌한 AA translator입니다. 현재 저장소는 해당 원형을 pnpm/TypeScript/Hono 기반으로 정리하고, SFX/server/static pages 배포와 provider profile을 추가한 후속 구현입니다.
+
 ## Runtime Modes
 
 공식 지원 모드는 세 가지입니다.
@@ -68,6 +74,29 @@ pnpm run build:pages
 - OpenAI-compatible profile도 만들 수 있지만 provider의 CORS 정책과 HTTPS page -> HTTP localhost mixed content 제한을 그대로 받습니다.
 - Local LLM server는 Server/SFX mode에서 사용하는 것을 기본으로 합니다.
 - Browser BYOK mode에는 backend secret 저장소가 없습니다. key는 사용자 본인 브라우저에만 저장됩니다.
+
+## Docker
+
+Server mode 이미지를 빌드합니다.
+
+```bash
+docker build -t aa-translator .
+docker run --rm -p 3000:3000 -v aa-translator-data:/app/data aa-translator
+```
+
+Local LLM은 Docker container에서 접근 가능한 host 또는 같은 Docker network의 OpenAI-compatible endpoint를 profile로 등록합니다.
+
+## GitHub Pages
+
+`master` branch에 push하면 GitHub Actions가 `pnpm run build:pages` 결과를 GitHub Pages에 배포합니다. 정적 Pages 빌드는 Browser BYOK mode이므로 local LLM은 CORS/mixed-content 제약을 받을 수 있고, local LLM 사용자는 SFX 또는 Docker/server mode를 권장합니다.
+
+## Release Artifacts
+
+`v*` tag를 push하면 GitHub Actions가 다음 산출물을 만듭니다.
+
+- Windows SFX binary
+- Linux SFX binary
+- GHCR Docker image
 
 ## Provider Profiles
 

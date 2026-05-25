@@ -1,0 +1,15 @@
+.git
+.github
+.omx
+.vite
+data
+dist
+node_modules
+coverage
+*.log
+.env
+.env.*
+!/.env.example
+bun.lock
+bun.lockb
+package-lock.json

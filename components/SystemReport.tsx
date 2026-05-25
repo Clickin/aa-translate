@@ -68,7 +68,7 @@ export const SystemReport: React.FC<SystemReportProps> = ({ isOpen, onClose }) =
              <div className="mt-2 bg-slate-800/50 p-3 rounded border border-slate-700 text-xs font-mono">
                 <p>입력 (Input): 100만 토큰당 $0.50</p>
                 <p>출력 (Output): 100만 토큰당 $3.00</p>
-                <p className="text-slate-500 mt-1 italic">* Gemini 2.5 Flash 기준 추정치</p>
+                <p className="text-slate-500 mt-1 italic">* 기본 Gemini 모델 기준 추정치</p>
             </div>
           </section>
 

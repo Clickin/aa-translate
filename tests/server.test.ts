@@ -53,7 +53,7 @@ test("default Gemini profile uses a current generateContent model", async () => 
 
   assert.deepEqual(
     payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
-    [{ provider: "gemini", model: "gemini-2.5-flash" }],
+    [{ provider: "gemini", model: "gemini-3.1-flash-lite" }],
   );
 });
 
@@ -82,7 +82,36 @@ test("stored profiles normalize the removed Gemini preview default", async () =>
 
   assert.deepEqual(
     payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
-    [{ provider: "gemini", model: "gemini-2.5-flash" }],
+    [{ provider: "gemini", model: "gemini-3.1-flash-lite" }],
+  );
+});
+
+test("stored profiles normalize the previous Gemini 2.5 default", async () => {
+  const path = join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`);
+  await writeFile(
+    path,
+    JSON.stringify([
+      {
+        id: "old-gemini",
+        name: "Gemini",
+        provider: "gemini",
+        baseUrl: "https://generativelanguage.googleapis.com",
+        model: "gemini-2.5-flash",
+        isDefault: true,
+      },
+    ]),
+    "utf8",
+  );
+
+  const app = createApp({ profiles: new ProfileStore(path) });
+  const response = await app.request("/api/profiles");
+  const payload = (await response.json()) as {
+    profiles: Array<{ provider: string; model: string }>;
+  };
+
+  assert.deepEqual(
+    payload.profiles.map((profile) => ({ provider: profile.provider, model: profile.model })),
+    [{ provider: "gemini", model: "gemini-3.1-flash-lite" }],
   );
 });
 
