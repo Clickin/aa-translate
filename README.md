@@ -4,12 +4,11 @@ AA(ASCII Art / Shift-JIS Art) 안의 일본어 대사를 한국어로 번역하�
 
 ## Runtime Modes
 
-공식 지원 모드는 두 가지입니다.
+공식 지원 모드는 세 가지입니다.
 
 - **SFX mode**: Bun `build --compile`로 만든 단일 실행 파일입니다. 실행 파일 안에 backend와 client assets가 함께 포함됩니다.
 - **Server mode**: Node.js에서 Hono backend를 실행합니다. homelab, 자체 VPC, reverse proxy 환경을 위한 모드입니다.
-
-정적 SPA 단독 배포는 공식 지원하지 않습니다. 브라우저는 LLM provider를 직접 호출하지 않고 항상 backend의 `/api/*`를 호출합니다.
+- **Browser BYOK mode**: GitHub Pages 같은 정적 호스팅에 올리는 SPA입니다. backend 없이 브라우저가 provider를 직접 호출하고, API key는 해당 브라우저의 localStorage에만 저장됩니다.
 
 ## Development
 
@@ -55,6 +54,21 @@ Windows에서는 `dist/aa-translator.exe`가 생성됩니다. Bun은 dependency 
 - Host: `127.0.0.1`
 - Port: `3000`
 
+## Browser BYOK Mode
+
+```bash
+pnpm run build:pages
+```
+
+`dist/client`를 GitHub Pages, Cloudflare Pages 같은 정적 호스팅에 배포합니다.
+
+제약:
+
+- Gemini는 브라우저에서 직접 호출하는 기본 대상입니다.
+- OpenAI-compatible profile도 만들 수 있지만 provider의 CORS 정책과 HTTPS page -> HTTP localhost mixed content 제한을 그대로 받습니다.
+- Local LLM은 Server/SFX mode에서 사용하는 것을 기본으로 합니다.
+- Browser BYOK mode에는 backend secret 저장소가 없습니다. key는 사용자 본인 브라우저에만 저장됩니다.
+
 ## Provider Profiles
 
 Provider 설정은 backend profile로 관리합니다.
@@ -73,4 +87,3 @@ pnpm run lint
 pnpm run build
 pnpm run package:sfx
 ```
-

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, RefreshCw, Save, Server, Trash2, X } from 'lucide-react';
 import type { ProviderModelInfo, TranslationProfile, TranslationProvider } from '../types';
+import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ interface ProfileModalProps {
   onFetchModels: (id: string) => Promise<ProviderModelInfo[]>;
 }
 
-const emptyForm = {
+const serverEmptyForm = {
   id: undefined as string | undefined,
   name: 'Local LLM',
   provider: 'openai-compatible' as TranslationProvider,
@@ -32,6 +33,15 @@ const emptyForm = {
   maxContextTokens: 4096,
   apiKey: '',
   isDefault: false,
+};
+
+const browserEmptyForm = {
+  ...serverEmptyForm,
+  name: 'Gemini BYOK',
+  provider: 'gemini' as TranslationProvider,
+  baseUrl: 'https://generativelanguage.googleapis.com',
+  model: 'gemini-3-flash-preview',
+  maxContextTokens: undefined as number | undefined,
 };
 
 export const ProfileModal: React.FC<ProfileModalProps> = ({
@@ -45,6 +55,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   onTestProfile,
   onFetchModels,
 }) => {
+  const isBrowserMode = isBrowserDeployTarget();
+  const emptyForm = isBrowserMode ? browserEmptyForm : serverEmptyForm;
   const [form, setForm] = useState(emptyForm);
   const [status, setStatus] = useState('');
   const [models, setModels] = useState<ProviderModelInfo[]>([]);
@@ -163,6 +175,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           <div className="p-5 space-y-4">
+            {isBrowserMode && (
+              <p className="text-xs text-slate-400 border border-slate-800 bg-slate-950 rounded px-3 py-2">
+                Browser BYOK mode: API key는 이 브라우저 localStorage에만 저장됩니다.
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="space-y-1 text-sm text-slate-300">
                 <span>이름</span>

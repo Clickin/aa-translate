@@ -1,4 +1,14 @@
 import { generateDictionaryPrompt } from '../../shared/prompts.js';
+import {
+  baseV1Url,
+  buildIndexedBatchContent,
+  chatEndpointFor,
+  DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS,
+  estimatePromptTokens as estimatePromptTokensForMessages,
+  parseIndexedBatchTranslations,
+  RESPONSE_TOKEN_RESERVE,
+  splitBatchByOpenAICompatibleContext,
+} from '../../shared/provider-utils.js';
 import type {
   ProviderBatchTranslateOptions,
   ProviderBatchTranslationResult,
@@ -7,20 +17,6 @@ import type {
   ProviderTranslateOptions,
   ProviderTranslationResult,
 } from './types.js';
-
-const baseV1Url = (baseUrl: string) => {
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return trimmed.endsWith('/v1') ? trimmed : `${trimmed}/v1`;
-};
-
-const chatEndpointFor = (baseUrl: string) => {
-  return `${baseV1Url(baseUrl)}/chat/completions`;
-};
-
-const DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS = 4096;
-const RESPONSE_TOKEN_RESERVE = 768;
-const CHAT_MESSAGE_OVERHEAD_TOKENS = 32;
-const MAX_OPENAI_COMPATIBLE_BATCH_ITEMS = 32;
 
 const headersFor = (apiKey?: string): Record<string, string> => {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
@@ -65,15 +61,11 @@ const contextTokenLimit = (options: ProviderTranslateOptions | ProviderBatchTran
   return options.profile.maxContextTokens ?? DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS;
 };
 
-const estimateTokens = (text: string): number => {
-  return Math.ceil(text.length / 2);
-};
-
 const estimatePromptTokens = (
   options: ProviderTranslateOptions | ProviderBatchTranslateOptions,
   content: string,
 ): number => {
-  return estimateTokens(options.systemInstruction) + estimateTokens(content) + CHAT_MESSAGE_OVERHEAD_TOKENS;
+  return estimatePromptTokensForMessages(options.systemInstruction, content);
 };
 
 const assertPromptFitsContext = (
@@ -90,139 +82,17 @@ const assertPromptFitsContext = (
   }
 };
 
-const buildBatchContent = (texts: string[], dictPrompt: string) => {
-  return `Output one valid JSON object only.
-Use zero-based string keys from "0" to "${texts.length - 1}".
-Each value must be the translation for the input item at the same index.
-Do not add explanations.
-${dictPrompt}
-Input Array: ${JSON.stringify(texts)}`;
-};
-
-const stripReasoningBlocks = (text: string): string => {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-};
-
-const findBalancedJsonValues = (text: string): unknown[] => {
-  const source = stripReasoningBlocks(text).replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-  const openToClose: Record<string, string> = { '[': ']', '{': '}' };
-  const values: unknown[] = [];
-
-  for (let start = 0; start < source.length; start += 1) {
-    const opening = source[start];
-    const expectedClose = openToClose[opening];
-    if (!expectedClose) {
-      continue;
-    }
-
-    const stack = [expectedClose];
-    let inString = false;
-    let escaped = false;
-
-    for (let index = start + 1; index < source.length; index += 1) {
-      const char = source[index];
-
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (char === '\\') {
-        escaped = inString;
-        continue;
-      }
-      if (char === '"') {
-        inString = !inString;
-        continue;
-      }
-      if (inString) {
-        continue;
-      }
-
-      if (openToClose[char]) {
-        stack.push(openToClose[char]);
-        continue;
-      }
-      if (char === stack[stack.length - 1]) {
-        stack.pop();
-        if (stack.length === 0) {
-          values.push(JSON.parse(source.slice(start, index + 1)));
-          start = index;
-          break;
-        }
-      }
-    }
-  }
-
-  return values;
-};
-
-const parseBatchTranslations = (rawText: string | undefined, expectedLength: number): string[] => {
-  if (!rawText) {
-    throw new Error('OpenAI-compatible provider returned an empty batch response.');
-  }
-
-  const values = findBalancedJsonValues(rawText);
-  const candidates = values
-    .map((parsed) => {
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      if (!parsed || typeof parsed !== 'object') {
-        return null;
-      }
-
-      const object = parsed as Record<string, unknown> & { translations?: unknown };
-      if (Array.isArray(object.translations)) {
-        return object.translations;
-      }
-
-      const indexed = Array.from({ length: expectedLength }, (_, index) => object[String(index)]);
-      return indexed.every((value) => value !== undefined) ? indexed : null;
-    })
-    .filter((value): value is unknown[] => Boolean(value) && value.length === expectedLength);
-  const translations = candidates.at(-1);
-
-  if (!translations) {
-    throw new Error(
-      `OpenAI-compatible provider batch response shape mismatch: expected ${expectedLength} translations.`,
-    );
-  }
-
-  return translations.map(String);
-};
-
 const splitBatchByContext = (
   options: ProviderBatchTranslateOptions,
   texts: string[],
   dictPrompt: string,
 ): string[][] => {
-  const chunks: string[][] = [];
-  let current: string[] = [];
-
-  for (const text of texts) {
-    const candidate = [...current, text];
-    const candidateContent = buildBatchContent(candidate, dictPrompt);
-    const limit = Math.max(256, contextTokenLimit(options) - RESPONSE_TOKEN_RESERVE);
-    const estimated = estimatePromptTokens(options, candidateContent);
-
-    if (estimated <= limit && candidate.length <= MAX_OPENAI_COMPATIBLE_BATCH_ITEMS) {
-      current = candidate;
-      continue;
-    }
-
-    if (current.length === 0) {
-      assertPromptFitsContext(options, buildBatchContent([text], dictPrompt));
-    }
-
-    chunks.push(current);
-    current = [text];
-  }
-
-  if (current.length > 0) {
-    chunks.push(current);
-  }
-
-  return chunks;
+  return splitBatchByOpenAICompatibleContext(
+    texts,
+    dictPrompt,
+    options.systemInstruction,
+    contextTokenLimit(options),
+  );
 };
 
 export const listOpenAICompatibleModels = async (options: ProviderListModelsOptions): Promise<ProviderModelList> => {
@@ -270,9 +140,9 @@ export const translateBatchWithOpenAICompatible = async (
   let outputTokens = 0;
 
   for (const chunk of chunks) {
-    const response = await postChat(options, buildBatchContent(chunk, dictPrompt));
+    const response = await postChat(options, buildIndexedBatchContent(chunk, dictPrompt));
     const rawText = response.choices?.[0]?.message?.content?.trim();
-    const chunkTranslations = parseBatchTranslations(rawText, chunk.length);
+    const chunkTranslations = parseIndexedBatchTranslations(rawText, chunk.length, 'OpenAI-compatible');
 
     translations.push(...chunkTranslations);
     inputTokens += response.usage?.prompt_tokens || 0;

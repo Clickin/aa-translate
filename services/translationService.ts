@@ -1,5 +1,8 @@
 import type {DictionaryEntry, TranslationJobResponse, TranslationJobResult} from "../types";
 import {DEFAULT_DICTIONARY, DEFAULT_SYSTEM_PROMPT} from "../src/shared/prompts";
+import {isBrowserDeployTarget} from "../src/shared/runtime";
+import {getBrowserStoredProfile} from "./profileService";
+import {translateBatchWithBrowserProfile, translateWithBrowserProfile} from "./browserProviderService";
 
 export {DEFAULT_DICTIONARY, DEFAULT_SYSTEM_PROMPT};
 
@@ -76,6 +79,16 @@ export const translateSelection = async (
   systemInstruction: string = DEFAULT_SYSTEM_PROMPT,
   profileId?: string,
 ): Promise<TranslationResponseData> => {
+  if (isBrowserDeployTarget()) {
+    return translateWithBrowserProfile({
+      profile: getBrowserStoredProfile(profileId),
+      text: textToTranslate,
+      customDictionary: customDict,
+      useDefaultDictionary: useDefaultDict,
+      systemInstruction,
+    });
+  }
+
   return runTranslationJob<TranslationResponseData>({
     mode: "single",
     profileId,
@@ -93,6 +106,16 @@ export const translateBatch = async (
   systemInstruction: string = DEFAULT_SYSTEM_PROMPT,
   profileId?: string,
 ): Promise<BatchTranslationResult> => {
+  if (isBrowserDeployTarget()) {
+    return translateBatchWithBrowserProfile({
+      profile: getBrowserStoredProfile(profileId),
+      texts,
+      customDictionary: customDict,
+      useDefaultDictionary: useDefaultDict,
+      systemInstruction,
+    });
+  }
+
   return runTranslationJob<BatchTranslationResult>({
     mode: "batch",
     profileId,
