@@ -67,7 +67,6 @@ pnpm run build:pages
 - Gemini는 브라우저에서 직접 호출하는 기본 대상입니다.
 - OpenAI-compatible profile도 만들 수 있지만 provider의 CORS 정책과 HTTPS page -> HTTP localhost mixed content 제한을 그대로 받습니다.
 - Local LLM server는 Server/SFX mode에서 사용하는 것을 기본으로 합니다.
-- Browser LLM profile은 wllama로 GGUF 모델을 브라우저에서 직접 실행합니다. 기본 목록은 E2B/Q2-IQ3급 모델을 우선으로 두며, 사용자가 직접 GGUF URL을 넣을 수 있습니다.
 - Browser BYOK mode에는 backend secret 저장소가 없습니다. key는 사용자 본인 브라우저에만 저장됩니다.
 
 ## Provider Profiles

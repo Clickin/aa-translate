@@ -126,34 +126,11 @@ export const parseIndexedBatchTranslations = (
   return translations.map(String);
 };
 
-export const parseLineSeparatedTranslations = (
-  rawText: string | undefined,
-  expectedLength: number,
-): string[] | null => {
-  if (!rawText) {
-    return null;
-  }
-
-  const lines = stripReasoningBlocks(rawText)
-    .split(/\r?\n/)
-    .map((line) =>
-      line
-        .trim()
-        .replace(/^\s*(?:[-*]|\d+[.)]|["']?\d+["']\s*[:：])\s*/, '')
-        .replace(/^["']|["']$/g, '')
-        .trim()
-    )
-    .filter(Boolean);
-
-  return lines.length === expectedLength ? lines : null;
-};
-
 export const splitBatchByOpenAICompatibleContext = (
   texts: string[],
   dictPrompt: string,
   systemInstruction: string,
   maxContextTokens: number = DEFAULT_OPENAI_COMPATIBLE_CONTEXT_TOKENS,
-  maxItems: number = MAX_OPENAI_COMPATIBLE_BATCH_ITEMS,
 ): string[][] => {
   const chunks: string[][] = [];
   let current: string[] = [];
@@ -164,7 +141,7 @@ export const splitBatchByOpenAICompatibleContext = (
     const promptLimit = Math.max(256, maxContextTokens - RESPONSE_TOKEN_RESERVE);
     const estimated = estimatePromptTokens(systemInstruction, candidateContent);
 
-    if (estimated <= promptLimit && candidate.length <= maxItems) {
+    if (estimated <= promptLimit && candidate.length <= MAX_OPENAI_COMPATIBLE_BATCH_ITEMS) {
       current = candidate;
       continue;
     }

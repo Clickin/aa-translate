@@ -48,7 +48,7 @@ export interface DictionaryEntry {
   translated: string;
 }
 
-export type TranslationProvider = "gemini" | "openai-compatible" | "browser-llm";
+export type TranslationProvider = "gemini" | "openai-compatible";
 
 export interface TranslationProfile {
   id: string;

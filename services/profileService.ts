@@ -4,7 +4,6 @@ import {
   testBrowserProfile,
   type BrowserStoredProfile,
 } from './browserProviderService';
-import { DEFAULT_BROWSER_LLM_MODEL } from '../src/shared/browser-llm-models';
 import { isBrowserDeployTarget } from '../src/shared/runtime';
 
 const jsonHeaders = { 'content-type': 'application/json' };
@@ -86,7 +85,7 @@ export const saveProfile = async (profile: TranslationProfileInput & { id?: stri
       id: existing?.id ?? globalThis.crypto.randomUUID(),
       name: profile.name.trim(),
       provider: profile.provider,
-      baseUrl: profile.baseUrl.trim() || (profile.provider === 'browser-llm' ? DEFAULT_BROWSER_LLM_MODEL.url : ''),
+      baseUrl: profile.baseUrl.trim(),
       model: profile.model.trim(),
       maxContextTokens: normalizeMaxContextTokens(profile.maxContextTokens),
       apiKey: profile.apiKey?.trim() || existing?.apiKey,

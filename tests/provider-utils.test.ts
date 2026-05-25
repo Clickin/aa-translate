@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildIndexedBatchContent,
-  parseLineSeparatedTranslations,
   parseIndexedBatchTranslations,
   splitBatchByOpenAICompatibleContext,
 } from "../src/shared/provider-utils";
-import { BROWSER_LLM_RECOMMENDED_MODELS } from "../src/shared/browser-llm-models";
-import { listBrowserProfileModels, testBrowserProfile } from "../services/browserProviderService";
+import { listBrowserProfileModels } from "../services/browserProviderService";
 
 test("indexed batch parser accepts object responses", () => {
   assert.deepEqual(parseIndexedBatchTranslations('{"0":"하나","1":"둘"}', 2, "Test"), [
@@ -47,27 +45,6 @@ test("OpenAI-compatible batch splitter caps item count", () => {
   );
 });
 
-test("batch splitter accepts smaller max item limits for browser LLM", () => {
-  const chunks = splitBatchByOpenAICompatibleContext(
-    Array.from({ length: 10 }, (_, index) => `line-${index}`),
-    "",
-    "Translate.",
-    200_000,
-    4,
-  );
-
-  assert.deepEqual(
-    chunks.map((chunk) => chunk.length),
-    [4, 4, 2],
-  );
-});
-
-test("line separated parser accepts simple browser LLM batch output", () => {
-  assert.deepEqual(parseLineSeparatedTranslations("하나\n둘\n셋", 3), ["하나", "둘", "셋"]);
-  assert.deepEqual(parseLineSeparatedTranslations("1. 하나\n2. 둘", 2), ["하나", "둘"]);
-  assert.equal(parseLineSeparatedTranslations("", 1), null);
-});
-
 test("browser OpenAI-compatible model discovery allows localhost without api key", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -96,50 +73,4 @@ test("browser OpenAI-compatible model discovery allows localhost without api key
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("browser LLM model discovery exposes baked recommendations and custom URL", async () => {
-  const customUrl = "https://example.com/custom.gguf";
-  assert.deepEqual(
-    await listBrowserProfileModels({
-      id: "browser",
-      name: "Browser LLM",
-      provider: "browser-llm",
-      baseUrl: customUrl,
-      model: "custom",
-      isDefault: true,
-    }),
-    [
-      ...BROWSER_LLM_RECOMMENDED_MODELS.map((model) => ({
-        id: model.id,
-        name: `${model.name} (${model.sizeLabel})`,
-        description: model.description,
-      })),
-      { id: customUrl, name: "Custom GGUF URL", description: customUrl },
-    ],
-  );
-});
-
-test("browser LLM profile test validates model URL without downloading GGUF", async () => {
-  await testBrowserProfile({
-    id: "browser",
-    name: "Browser LLM",
-    provider: "browser-llm",
-    baseUrl: "",
-    model: BROWSER_LLM_RECOMMENDED_MODELS[0].id,
-    isDefault: true,
-  });
-
-  await assert.rejects(
-    () =>
-      testBrowserProfile({
-        id: "browser",
-        name: "Browser LLM",
-        provider: "browser-llm",
-        baseUrl: "file:///tmp/model.gguf",
-        model: "custom",
-        isDefault: true,
-      }),
-    /http\(s\) GGUF URL/,
-  );
 });
