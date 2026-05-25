@@ -16,6 +16,7 @@
     "package:sfx": "pnpm build:client && pnpm embed:client && bun build ./src/server/bun-entry.ts --compile --outfile dist/aa-translator",
     "start:server": "node --env-file-if-exists=.env dist/server/src/server/node-entry.js",
     "preview": "vite preview",
+    "preview:pages": "tsx tools/vite-pages.ts preview",
     "clean": "tsx tools/clean.ts",
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
