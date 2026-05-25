@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildIndexedBatchContent,
+  splitBatchByCharacterBudget,
   parseIndexedBatchTranslations,
   splitBatchByOpenAICompatibleContext,
 } from "../src/shared/provider-utils";
@@ -42,6 +43,19 @@ test("OpenAI-compatible batch splitter caps item count", () => {
   assert.deepEqual(
     chunks.map((chunk) => chunk.length),
     [32, 32, 1],
+  );
+});
+
+test("character budget batch splitter caps item count for structured LLM output", () => {
+  const chunks = splitBatchByCharacterBudget(
+    Array.from({ length: 97 }, (_, index) => `行${index}`),
+    4000,
+    32,
+  );
+
+  assert.deepEqual(
+    chunks.map((chunk) => chunk.length),
+    [32, 32, 32, 1],
   );
 });
 

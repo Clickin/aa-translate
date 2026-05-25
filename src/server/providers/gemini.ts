@@ -1,5 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
 import { generateDictionaryPrompt } from '../../shared/prompts.js';
+import {
+  buildIndexedBatchContent,
+  parseIndexedBatchTranslations,
+  splitBatchByCharacterBudget,
+} from '../../shared/provider-utils.js';
 import type {
   ProviderBatchTranslateOptions,
   ProviderBatchTranslationResult,
@@ -78,22 +83,7 @@ export const translateBatchWithGemini = async (
 
   const ai = getClient(options.profile.apiKey);
   const dictPrompt = generateDictionaryPrompt(options.customDictionary, options.useDefaultDictionary);
-  const chunks: string[][] = [];
-  let currentChunk: string[] = [];
-  let currentChunkLength = 0;
-
-  for (const text of options.texts) {
-    if (currentChunk.length > 0 && (currentChunkLength + text.length > 4000 || currentChunk.length >= 200)) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      currentChunkLength = 0;
-    }
-    currentChunk.push(text);
-    currentChunkLength += text.length;
-  }
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
+  const chunks = splitBatchByCharacterBudget(options.texts, 4000, 32);
 
   const translations: string[] = [];
   let inputTokens = 0;
@@ -109,23 +99,14 @@ export const translateBatchWithGemini = async (
       }
 
       try {
+        const content = buildIndexedBatchContent(chunk, dictPrompt);
         const response = await ai.models.generateContent({
           model: options.profile.model,
           contents: `${options.systemInstruction}
-TECHNICAL CONSTRAINT: Output must be a valid JSON array of strings.
-CRITICAL: The output array must have exactly ${chunk.length} items. Do not skip any items.
-Maintain the exact order of the input array.
-${dictPrompt}
-Input Array: ${JSON.stringify(chunk)}`,
+${content}`,
         });
 
-        const jsonText = response.text?.trim().replace(/```json|```/g, '').trim();
-        const parsed = jsonText ? JSON.parse(jsonText) : null;
-        if (!Array.isArray(parsed) || parsed.length !== chunk.length) {
-          throw new Error('Gemini batch response shape mismatch.');
-        }
-
-        chunkResult = parsed.map(String);
+        chunkResult = parseIndexedBatchTranslations(response.text?.trim(), chunk.length, 'Gemini');
         inputTokens += response.usageMetadata?.promptTokenCount || 0;
         outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
       } catch {

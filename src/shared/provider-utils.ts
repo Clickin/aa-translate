@@ -162,3 +162,29 @@ export const splitBatchByOpenAICompatibleContext = (
 
   return chunks;
 };
+
+export const splitBatchByCharacterBudget = (
+  texts: string[],
+  maxCharacters: number,
+  maxItems: number,
+): string[][] => {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let currentLength = 0;
+
+  for (const text of texts) {
+    if (current.length > 0 && (currentLength + text.length > maxCharacters || current.length >= maxItems)) {
+      chunks.push(current);
+      current = [];
+      currentLength = 0;
+    }
+    current.push(text);
+    currentLength += text.length;
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};

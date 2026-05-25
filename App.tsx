@@ -40,7 +40,10 @@ import {
   MessageSquareQuote,
   Server,
   CheckSquare,
+  Bell,
+  BellOff,
 } from "lucide-react";
+import { translationNotifier } from "./services/notificationService";
 
 function App() {
   const [content, setContent] = useState<string>("");
@@ -58,6 +61,9 @@ function App() {
   const [isDictOpen, setIsDictOpen] = useState(false);
   const [isPromptOpen, setIsPromptOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(
+    () => localStorage.getItem("aat_notify_on_complete") !== "false",
+  );
 
   const [historyStack, setHistoryStack] = useState<
     { prevContent: string; prevSegments: TextSegment[] }[]
@@ -94,6 +100,10 @@ function App() {
       localStorage.setItem("aat_profile_id", activeProfileId);
     }
   }, [activeProfileId]);
+
+  useEffect(() => {
+    localStorage.setItem("aat_notify_on_complete", String(isNotificationEnabled));
+  }, [isNotificationEnabled]);
 
   // Dictionary State with Persistence
   const [customDictionary, setCustomDictionary] = useState<DictionaryEntry[]>(() => {
@@ -175,6 +185,7 @@ function App() {
 
     setIsTranslating(true);
     setHistoryStack((prev) => [...prev, { prevContent: content, prevSegments: [] }]);
+    void translationNotifier.requestPermission(isNotificationEnabled);
 
     try {
       const { text: translatedText, usage } = await translateSelection(
@@ -207,7 +218,21 @@ function App() {
           text: translatedText,
         });
       }
+      translationNotifier.notify(
+        {
+          title: "번역 완료",
+          body: "선택 영역 번역이 완료되었습니다.",
+        },
+        isNotificationEnabled,
+      );
     } catch (error: any) {
+      translationNotifier.notify(
+        {
+          title: "번역 실패",
+          body: error.message || "알 수 없는 오류",
+        },
+        isNotificationEnabled,
+      );
       alert(`번역 실패: ${error.message || "알 수 없는 오류"}`);
     } finally {
       setIsTranslating(false);
@@ -220,6 +245,7 @@ function App() {
 
     setIsTranslating(true);
     setHistoryStack((prev) => [...prev, { prevContent: content, prevSegments: [...segments] }]);
+    void translationNotifier.requestPermission(isNotificationEnabled);
 
     try {
       const groups = groupSelectedJapaneseSentences(segments);
@@ -267,7 +293,21 @@ function App() {
         original: `${selectedSegments.length} segments / ${groups.length} groups / ${usage.requestCount ?? 1} API requests`,
         translated: "Done",
       });
+      translationNotifier.notify(
+        {
+          title: "번역 완료",
+          body: `${selectedSegments.length}개 segment / ${groups.length}개 group / ${usage.requestCount ?? 1}회 요청 완료`,
+        },
+        isNotificationEnabled,
+      );
     } catch (error: any) {
+      translationNotifier.notify(
+        {
+          title: "번역 실패",
+          body: error.message || "알 수 없는 오류",
+        },
+        isNotificationEnabled,
+      );
       alert(`일괄 번역 실패: ${error.message || "알 수 없는 오류"}`);
       console.error(error);
     } finally {
@@ -358,6 +398,24 @@ function App() {
 
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              onClick={() => {
+                const next = !isNotificationEnabled;
+                setIsNotificationEnabled(next);
+                if (next) {
+                  void translationNotifier.requestPermission(true);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border rounded text-xs transition-colors sm:px-3 ${isNotificationEnabled ? "border-emerald-600/50 text-emerald-300" : "border-slate-700 text-slate-500"}`}
+              title={isNotificationEnabled ? "번역 완료 알림 끄기" : "번역 완료 알림 켜기"}
+            >
+              {isNotificationEnabled ? (
+                <Bell className="w-3.5 h-3.5" />
+              ) : (
+                <BellOff className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">알림</span>
+            </button>
             <button
               onClick={() => setIsProfileOpen(true)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border rounded text-xs transition-colors sm:px-3 ${activeProfile ? "border-blue-600/50 text-blue-400" : "border-slate-700 text-slate-300"}`}

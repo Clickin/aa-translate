@@ -9,6 +9,7 @@ import {
   estimatePromptTokens,
   parseIndexedBatchTranslations,
   RESPONSE_TOKEN_RESERVE,
+  splitBatchByCharacterBudget,
   splitBatchByOpenAICompatibleContext,
 } from '../src/shared/provider-utils';
 
@@ -136,28 +137,6 @@ const postOpenAIChat = async (
   }
 };
 
-const splitGeminiBatch = (texts: string[]): string[][] => {
-  const chunks: string[][] = [];
-  let currentChunk: string[] = [];
-  let currentChunkLength = 0;
-
-  for (const text of texts) {
-    if (currentChunk.length > 0 && (currentChunkLength + text.length > 4000 || currentChunk.length >= 200)) {
-      chunks.push(currentChunk);
-      currentChunk = [];
-      currentChunkLength = 0;
-    }
-    currentChunk.push(text);
-    currentChunkLength += text.length;
-  }
-
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks;
-};
-
 export const listBrowserProfileModels = async (profile: BrowserStoredProfile): Promise<ProviderModelInfo[]> => {
   if (profile.provider === 'gemini') {
     const ai = getGeminiClient(profile);
@@ -250,7 +229,7 @@ export const translateBatchWithBrowserProfile = async (
 
   const dictPrompt = generateDictionaryPrompt(options.customDictionary, options.useDefaultDictionary);
   const chunks = options.profile.provider === 'gemini'
-    ? splitGeminiBatch(options.texts)
+    ? splitBatchByCharacterBudget(options.texts, 4000, 32)
     : splitBatchByOpenAICompatibleContext(
       options.texts,
       dictPrompt,
