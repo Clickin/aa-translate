@@ -449,6 +449,178 @@ test("local async batch jobs accept index-keyed JSON object translations", async
   }
 });
 
+test("local async batch jobs request structured output with an indexed JSON schema", async () => {
+  const originalFetch = globalThis.fetch;
+  let responseFormat: any;
+
+  globalThis.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body)) as {
+      response_format?: unknown;
+    };
+    responseFormat = request.response_format;
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: '{"0":"ko:こんにちは","1":"ko:世界"}',
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }),
+      { headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const store = new ProfileStore(
+      join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`),
+    );
+    const profile = await store.save({
+      name: "LM Studio",
+      provider: "openai-compatible",
+      baseUrl: "http://127.0.0.1:11434",
+      model: "gemma-local",
+      maxContextTokens: 4096,
+      isDefault: true,
+    });
+
+    const app = createApp({ profiles: store });
+    const createResponse = await app.request("/api/translation-jobs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "batch",
+        profileId: profile.id,
+        texts: ["こんにちは", "世界"],
+        useDefaultDictionary: false,
+        systemInstruction: "Translate to Korean.",
+      }),
+    });
+
+    const created = (await createResponse.json()) as { id: string };
+    let state: any;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const stateResponse = await app.request(`/api/translation-jobs/${created.id}`);
+      state = await stateResponse.json();
+      if (state.status === "completed") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.equal(state.status, "completed");
+    assert.deepEqual(state.result.translations, ["ko:こんにちは", "ko:世界"]);
+    assert.deepEqual(responseFormat, {
+      type: "json_schema",
+      json_schema: {
+        name: "indexed_batch_translations",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            "0": {
+              type: "string",
+              description: "Korean translation for input item 0.",
+            },
+            "1": {
+              type: "string",
+              description: "Korean translation for input item 1.",
+            },
+          },
+          required: ["0", "1"],
+          additionalProperties: false,
+        },
+      },
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("local async batch jobs fall back when json_schema response format is unsupported", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestHasResponseFormat: boolean[] = [];
+
+  globalThis.fetch = async (_input, init) => {
+    const request = JSON.parse(String(init?.body)) as {
+      response_format?: { type?: string };
+    };
+    requestHasResponseFormat.push(Boolean(request.response_format));
+
+    if (request.response_format) {
+      return new Response(
+        JSON.stringify({ error: { message: "response_format json_schema is not supported" } }),
+        {
+          status: 400,
+          statusText: "Bad Request",
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }
+
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: '{"0":"ko:こんにちは","1":"ko:世界"}',
+            },
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 4 },
+      }),
+      { headers: { "content-type": "application/json" } },
+    );
+  };
+
+  try {
+    const store = new ProfileStore(
+      join(process.env.TEMP || process.cwd(), `aa-translator-${crypto.randomUUID()}.json`),
+    );
+    const profile = await store.save({
+      name: "LM Studio",
+      provider: "openai-compatible",
+      baseUrl: "http://127.0.0.1:11434",
+      model: "gemma-local",
+      maxContextTokens: 4096,
+      isDefault: true,
+    });
+
+    const app = createApp({ profiles: store });
+    const createResponse = await app.request("/api/translation-jobs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "batch",
+        profileId: profile.id,
+        texts: ["こんにちは", "世界"],
+        useDefaultDictionary: false,
+        systemInstruction: "Translate to Korean.",
+      }),
+    });
+
+    const created = (await createResponse.json()) as { id: string };
+    let state: any;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const stateResponse = await app.request(`/api/translation-jobs/${created.id}`);
+      state = await stateResponse.json();
+      if (state.status === "completed") {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert.equal(state.status, "completed");
+    assert.deepEqual(state.result.translations, ["ko:こんにちは", "ko:世界"]);
+    assert.deepEqual(requestHasResponseFormat, [true, false]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("local async batch jobs split large item counts before asking the model", async () => {
   const originalFetch = globalThis.fetch;
   const chunkSizes: number[] = [];

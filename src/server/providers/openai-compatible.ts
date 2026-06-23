@@ -31,14 +31,36 @@ const isGenerationModelId = (id: string): boolean => {
   return !/(^|[-_/])(embed|embedding|rerank|re-rank|moderation|whisper|tts|stt)([-_/]|$)/.test(normalized);
 };
 
+const indexedBatchResponseFormat = (length: number) => ({
+  type: 'json_schema',
+  json_schema: {
+    name: 'indexed_batch_translations',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: Object.fromEntries(
+        Array.from({ length }, (_, index) => [
+          String(index),
+          {
+            type: 'string',
+            description: `Korean translation for input item ${index}.`,
+          },
+        ]),
+      ),
+      required: Array.from({ length }, (_, index) => String(index)),
+      additionalProperties: false,
+    },
+  },
+});
+
 const postChat = async (
   options: ProviderTranslateOptions | ProviderBatchTranslateOptions,
   content: string,
-  jsonMode?: boolean,
+  responseFormat?: unknown,
 ) => {
   assertPromptFitsContext(options, content);
 
-  const response = await fetch(chatEndpointFor(options.profile.baseUrl), {
+  const post = (includeResponseFormat: boolean) => fetch(chatEndpointFor(options.profile.baseUrl), {
     method: 'POST',
     headers: headersFor(options.profile.apiKey),
     body: JSON.stringify({
@@ -47,13 +69,23 @@ const postChat = async (
         { role: 'system', content: options.systemInstruction },
         { role: 'user', content },
       ],
-      temperature: jsonMode ? 0 : 0.2,
-      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      temperature: responseFormat ? 0 : 0.2,
+      ...(includeResponseFormat ? { response_format: responseFormat } : {}),
     }),
   });
 
+  let response = await post(Boolean(responseFormat));
+  if (!response.ok && responseFormat && [400, 422].includes(response.status)) {
+    response = await post(false);
+  }
+
   if (!response.ok) {
-    throw new Error(`OpenAI-compatible provider failed: ${response.status} ${response.statusText}`);
+    const payload = await response.json().catch(() => ({}));
+    const error = payload && typeof payload === 'object' && 'error' in payload
+      ? (payload as { error?: { message?: unknown } }).error
+      : undefined;
+    const message = typeof error?.message === 'string' ? error.message : response.statusText;
+    throw new Error(`OpenAI-compatible provider failed: ${response.status} ${message}`);
   }
 
   return await response.json() as {
@@ -145,7 +177,7 @@ export const translateBatchWithOpenAICompatible = async (
   let outputTokens = 0;
 
   for (const chunk of chunks) {
-    const response = await postChat(options, buildIndexedBatchContent(chunk, dictPrompt), true);
+    const response = await postChat(options, buildIndexedBatchContent(chunk, dictPrompt), indexedBatchResponseFormat(chunk.length));
     const rawText = response.choices?.[0]?.message?.content?.trim();
     const chunkTranslations = parseIndexedBatchTranslations(rawText, chunk.length, 'OpenAI-compatible');
 
