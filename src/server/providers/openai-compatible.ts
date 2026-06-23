@@ -31,7 +31,11 @@ const isGenerationModelId = (id: string): boolean => {
   return !/(^|[-_/])(embed|embedding|rerank|re-rank|moderation|whisper|tts|stt)([-_/]|$)/.test(normalized);
 };
 
-const postChat = async (options: ProviderTranslateOptions | ProviderBatchTranslateOptions, content: string) => {
+const postChat = async (
+  options: ProviderTranslateOptions | ProviderBatchTranslateOptions,
+  content: string,
+  jsonMode?: boolean,
+) => {
   assertPromptFitsContext(options, content);
 
   const response = await fetch(chatEndpointFor(options.profile.baseUrl), {
@@ -43,7 +47,8 @@ const postChat = async (options: ProviderTranslateOptions | ProviderBatchTransla
         { role: 'system', content: options.systemInstruction },
         { role: 'user', content },
       ],
-      temperature: 0.2,
+      temperature: jsonMode ? 0 : 0.2,
+      ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
     }),
   });
 
@@ -140,7 +145,7 @@ export const translateBatchWithOpenAICompatible = async (
   let outputTokens = 0;
 
   for (const chunk of chunks) {
-    const response = await postChat(options, buildIndexedBatchContent(chunk, dictPrompt));
+    const response = await postChat(options, buildIndexedBatchContent(chunk, dictPrompt), true);
     const rawText = response.choices?.[0]?.message?.content?.trim();
     const chunkTranslations = parseIndexedBatchTranslations(rawText, chunk.length, 'OpenAI-compatible');
 

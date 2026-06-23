@@ -103,6 +103,10 @@ export const translateBatchWithGemini = async (
         model: options.profile.model,
         contents: `${options.systemInstruction}
 ${content}`,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0,
+        },
       });
       inputTokens += response.usageMetadata?.promptTokenCount || 0;
       outputTokens += response.usageMetadata?.candidatesTokenCount || 0;
